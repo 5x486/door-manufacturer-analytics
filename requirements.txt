@@ -1,0 +1,52 @@
+# ============================================================================
+# 杭博门业经营分析系统 · 依赖清单
+# 环境：Python 3.12 / Django 6.0 / MySQL 8.0
+# 安装：pip install -r requirements.txt
+# ============================================================================
+
+# ---- Web 框架 ----
+Django>=6.0,<6.1
+djangorestframework>=3.15
+drf-spectacular>=0.27          # OpenAPI 3 文档（/api/docs/）
+whitenoise>=6.6                # 静态文件服务（生产）
+
+# ---- 数据库驱动（MySQL）----
+mysqlclient>=2.2               # 首选驱动（C 扩展，性能好）
+PyMySQL>=1.1                   # 备用纯 Python 驱动（无编译环境时用）
+
+# ---- 数据处理与分析 ----
+pandas>=2.2
+numpy>=1.26
+scipy>=1.11
+scikit-learn>=1.3
+xgboost>=2.0
+
+# ---- 可视化与报表 ----
+plotly>=5.20                   # notebook 与离线图表
+openpyxl>=3.1                  # Excel 月报导出
+matplotlib>=3.8
+seaborn>=0.13
+
+# ---- 模型持久化 ----
+joblib>=1.3
+
+# ---- 配置与工具 ----
+python-dotenv>=1.0
+
+# ---- 文档输出 ----
+python-docx>=1.1               # 生成面试问答 Word
+
+# ---- 测试与质量 ----
+pytest>=8.0
+pytest-django>=4.8
+pytest-cov>=5.0
+factory-boy>=3.3
+
+# ---- Notebook（分析原件保留）----
+nbformat>=5.10
+nbclient>=0.10
+ipykernel>=6.28
+jupyter_client>=8.6
+
+# ---- 旧版原型（保留作改造前后对照）----
+streamlit>=1.36

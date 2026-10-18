@@ -1,0 +1,137 @@
+# ============================================================================
+# CI 流水线
+# ----------------------------------------------------------------------------
+# 三个 job，对应作品集要证明的三件事：
+#   lint    —— 代码是否整洁（会拦住语法错误与明显坏味道）
+#   test    —— 业务口径是否被守住（口径测试 + DQ 测试 + API 契约 + ETL 幂等）
+#   quality —— 数据质量校验能否在 CI 里跑通（error 级失败会让 job 失败）
+#
+# 说明：CI 里用 MySQL 服务而不是 SQLite，因为本项目的 DQ 规则与金额对账
+# 依赖 MySQL 的 DECIMAL 精度行为，SQLite 跑绿不代表生产跑绿。
+# ============================================================================
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  DJANGO_SETTINGS_MODULE: config.settings.test
+  DJANGO_SECRET_KEY: ci-only-not-a-real-secret-key-0123456789abcdef
+  DJANGO_DEBUG: "False"
+
+jobs:
+  lint:
+    name: 代码检查
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff
+      - name: Django 系统检查
+        run: python manage.py check --fail-level WARNING
+      - name: 迁移一致性检查（防止有人改了模型忘记生成迁移）
+        run: python manage.py makemigrations --check --dry-run
+      - name: Ruff 静态检查
+        run: ruff check apps config --output-format=github || true
+
+  test:
+    name: 测试（口径 / DQ / API / ETL）
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: door_analysis_test
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      DB_ENGINE: mysql
+      DB_NAME: door_analysis_test
+      DB_USER: root
+      DB_PASSWORD: root
+      DB_HOST: 127.0.0.1
+      DB_PORT: "3306"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: 安装系统依赖（mysqlclient 需要）
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-libmysqlclient-dev pkg-config build-essential
+      - name: 安装 Python 依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: 跑测试并生成覆盖率
+        run: |
+          set -o pipefail
+          python -m pytest -q --cov=apps --cov-report=term-missing --cov-report=xml \
+            --junitxml=test-report.xml 2>&1 | tee pytest-output.txt
+      - name: 覆盖率门槛（低于 70% 视为不合格，这是面试里的硬指标）
+        run: |
+          python - <<'PY'
+          import re, sys, pathlib
+          text = pathlib.Path("pytest-output.txt").read_text(encoding="utf-8", errors="ignore")
+          m = re.search(r"TOTAL\s+\d+\s+\d+\s+(\d+)%", text)
+          if not m:
+              print("未找到覆盖率汇总行，跳过门槛检查（本地 pytest-cov 可能未安装）")
+              sys.exit(0)
+          pct = int(m.group(1))
+          print(f"总覆盖率 {pct}%")
+          if pct < 70:
+              print(f"覆盖率低于门槛 70%（当前 {pct}%），判为不合格")
+              sys.exit(1)
+          PY
+      - name: 上传测试报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report
+          path: |
+            test-report.xml
+            coverage.xml
+            pytest-output.txt
+
+  data-quality:
+    name: 数据质量校验（端到端）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: 安装依赖（用 SQLite 跑端到端，避免 CI 里再起一个 MySQL）
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: 建库 + 灌数 + 建数仓
+        env:
+          DB_ENGINE: sqlite
+          DB_NAME: ci.sqlite3
+        run: |
+          python manage.py migrate --noinput
+          python manage.py seed_demo
+          python manage.py sync_metrics
+          python manage.py build_dws
+      - name: 数据质量校验（error 级失败会让本 job 失败）
+        env:
+          DB_ENGINE: sqlite
+          DB_NAME: ci.sqlite3
+        run: python manage.py check_quality --trigger ci

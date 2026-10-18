@@ -1,0 +1,87 @@
+# 单机部署编排：db（MySQL 8.0） + web（Django + gunicorn）。
+# 用 docker compose 而不是裸装数据库，是为了让「开发环境能跑」和
+# 「客户现场能跑」共用同一份配置，减少环境漂移带来的排查成本。
+#
+# 使用方式（在项目根目录）：
+#   docker compose -f deploy/docker-compose.yml --env-file .env up -d --build
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: door_analysis_db
+    restart: unless-stopped
+    # 字符集与排序规则在建库阶段就定死：utf8mb4 支持生僻字与 emoji，
+    # utf8mb4_unicode_ci 让中文排序符合业务预期。
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+      - --explicit_defaults_for_timestamp=ON
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?请在 .env 中设置 MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-door_analysis}
+      MYSQL_USER: ${MYSQL_USER:-door_analysis}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?请在 .env 中设置 MYSQL_PASSWORD}
+      TZ: Asia/Shanghai
+    volumes:
+      # 命名卷持久化：容器重建不丢数据；备份时直接打包该卷即可
+      - mysql_data:/var/lib/mysql
+      # 首次初始化时执行的建库脚本（幂等，可重复挂载）
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # web 用 depends_on.condition 等这个检查通过再启动，
+      # 否则 Django 迁移会在 MySQL 还没就绪时失败。
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    networks:
+      - door_net
+
+  web:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: door_analysis_web
+    restart: unless-stopped
+    # 迁移放在启动命令里而不是构建阶段：构建时数据库还不可达，
+    # 且每次启动都跑一遍 migrate 能保证 schema 与代码版本始终一致。
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120 --access-logfile - --error-logfile -"
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?请在 .env 中设置 DJANGO_SECRET_KEY}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost:8000}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-door_analysis}
+      MYSQL_USER: ${MYSQL_USER:-door_analysis}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?请在 .env 中设置 MYSQL_PASSWORD}
+      # 服务名即主机名，走 compose 内部网络，无需暴露数据库端口到宿主机
+      MYSQL_HOST: db
+      MYSQL_PORT: "3306"
+      TZ: Asia/Shanghai
+    ports:
+      - "8000:8000"
+    volumes:
+      # 静态文件与上传附件跨容器持久化，也方便 nginx 直接挂载读取
+      - static_data:/app/staticfiles
+      - media_data:/app/media
+      - logs_data:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - door_net
+
+volumes:
+  mysql_data:
+  static_data:
+  media_data:
+  logs_data:
+
+networks:
+  door_net:
+    driver: bridge

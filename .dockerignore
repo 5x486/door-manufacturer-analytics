@@ -1,0 +1,68 @@
+# 构建上下文瘦身：把体积大、且与镜像运行无关的东西挡在 docker build 之外，
+# 既加快构建（减少几十 MB 到几百 MB 的传输），也避免把本地密钥带进镜像层。
+
+# 版本控制与 IDE
+.git
+.gitignore
+.github
+.idea
+.vscode
+*.swp
+*.swo
+
+# Python 运行时与缓存
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.python-version
+
+# 本地 MySQL 数据目录（开发者本机映射卷，绝不能进镜像）
+.mysql/
+mysql-data/
+.cache/
+
+# 前端依赖与构建产物（若将来把静态资源构建挪到镜像外）
+node_modules/
+npm-debug.log*
+yarn-error.log*
+staticfiles/
+media/
+
+# 敏感配置：镜像里只允许通过环境变量注入
+.env
+.env.*
+!.env.example
+
+# 分析产物与报告（模型文件可能上百 MB，运行时按需挂载）
+artifacts/
+reports/
+logs/
+*.log
+
+# 测试与文档：镜像里不需要跑测试，也不需要在容器内保留测试数据
+# （tests 被排除后镜像内不会存在测试用例，生产运行时也就无从误触发）
+tests/
+docs/
+htmlcov/
+.coverage
+.coverage.*
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# 容器编排自身
+deploy/
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# 系统杂物
+.DS_Store
+Thumbs.db
+README.md
