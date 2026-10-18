@@ -1,0 +1,113 @@
+{% load static %}<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>登录 · {{ project_name|default:"杭博门业经营分析系统" }}</title>
+    <meta name="description" content="杭博门业经营分析系统登录页：全部数据为模拟数据，仅用于演示经营分析方法。">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23257070'/%3E%3Crect x='18' y='13' width='28' height='38' rx='2' fill='none' stroke='%23ffffff' stroke-width='4'/%3E%3Ccircle cx='39' cy='34' r='2.6' fill='%23ffffff'/%3E%3C/svg%3E">
+
+    <script>(function(){try{var t=localStorage.getItem('dsh-theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+
+    {# 与 base.html 同一套入场预备与兜底计时器 #}
+    {% include "partials/_motion_boot.html" %}
+
+    {# 登录页不继承 base.html，所以样式链接要自己带上版本号： #}
+    {# 少了这个参数，浏览器会按启发式规则长期缓存旧 CSS，导致「改了配色但界面不变」。 #}
+    <link rel="stylesheet" href="{% static 'css/design-system.css' %}?v={{ static_version }}">
+    <link rel="stylesheet" href="{% static 'css/motion-layer.css' %}?v={{ static_version }}">
+    <style>
+        /* 登录页是独立页面：此时还没有导航上下文，不套 .app-shell；
+           设计系统也没有「整页居中卡片」这类排版类。这里只用页面级 CSS 做三件事：
+           1) 让卡片在视口内居中并限制最大宽度；
+           2) 补上密码框的输入样式（design-system.css 只样式化了
+              text/date/number/textarea 与 select，没有覆盖 input[type="password"]）。
+           不修改 design-system.css，也不新增任何组件类名。 */
+        .bg-page { min-height: 100vh; display: grid; place-items: center; padding: var(--sp-6) var(--sp-4); }
+        .bg-page > .card { width: 100%; max-width: 880px; }
+        input[type="password"] {
+            width: 100%; min-height: 36px; padding: 7px 10px;
+            font: inherit; font-size: 13px;
+            color: var(--text-primary); background: var(--bg-surface);
+            border: 1px solid var(--border-default); border-radius: var(--radius-sm);
+        }
+        input[type="password"]:hover { border-color: var(--border-strong); }
+        input[type="password"]:focus {
+            border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); outline: none;
+        }
+    </style>
+</head>
+<body>
+<main class="bg-page">
+    <div class="card">
+        <div class="grid grid--2">
+
+            <section class="card__body">
+                <div class="sidebar__mark" aria-hidden="true">杭</div>
+                <div class="page-head">
+                    <div class="page-head__eyebrow">门业经营分析</div>
+                    <h1 class="page-head__title">{{ project_name|default:"杭博门业经营分析系统" }}</h1>
+                    <p class="page-head__question">
+                        今年到底赚了多少？钱花在哪儿？客户还会不会回来？
+                        把这三个问题各用一屏回答完，而不是把报表堆给老板自己找。
+                    </p>
+                </div>
+
+                <hr class="divider">
+
+                <div class="grid">
+                    <div class="kv-inline"><span>分析模块</span><b>13</b></div>
+                    <div class="kv-inline"><span>指标口径</span><b>56 条</b></div>
+                    <div class="kv-inline"><span>校验规则</span><b>25 条</b></div>
+                </div>
+            </section>
+
+            <section class="card__body">
+                <div class="section__head">
+                    <h2 class="section__title">登录</h2>
+                    <span class="section__note">使用系统账号登录</span>
+                </div>
+
+                {% if form.errors %}
+                    <div class="callout callout--error">
+                        <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="alert" %}</span>
+                        <div>用户名或密码不正确，请重新输入后再试。</div>
+                    </div>
+                {% endif %}
+
+                <form method="post" action="{% url 'login' %}">
+                    {% csrf_token %}
+                    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+
+                    <div class="field">
+                        <label class="field__label" for="id_username">用户名</label>
+                        <input type="text" id="id_username" name="username"
+                               autocomplete="username" autofocus required>
+                    </div>
+
+                    <div class="field">
+                        <label class="field__label" for="id_password">密码</label>
+                        <input type="password" id="id_password" name="password"
+                               autocomplete="current-password" required>
+                        <span class="field__hint">密码区分大小写，注意不要开启大写锁定</span>
+                    </div>
+
+                    <div class="card__actions">
+                        <button type="submit" class="btn btn--primary">登录</button>
+                    </div>
+                </form>
+
+                <hr class="divider">
+
+                <p class="text-muted">
+                    演示账号：admin / admin123456。系统内所有数据均为模拟数据，
+                    仅用于演示经营分析方法与系统功能，不代表任何真实企业的经营情况。
+                </p>
+            </section>
+        </div>
+    </div>
+</main>
+
+<script src="{% static 'js/motion.js' %}?v={{ static_version }}"></script>
+</body>
+</html>

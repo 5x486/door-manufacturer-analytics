@@ -1,0 +1,69 @@
+
+/* --------------------------------------------------------------------------
+   22. 决策模拟：可编辑的数值（看起来是文字，实际能直接改）
+   --------------------------------------------------------------------------
+   交互约定（按用户明确要求）：
+     · 外观必须和原来一样，是一串安静的数字，不是表单方框；
+     · 但**必须能直接改**：点上去就能输入，输入后滑块跟着动。
+   实现取巧点：用真实的 input[type=number]，但去掉所有边框与底色，
+   宽度按内容固定（tabular-nums + 等宽字号），所以从视觉上它就是一段文字。
+   鼠标悬停/聚焦时才出现一层极淡的底色与描边，作为「这里可以编辑」的唯一提示，
+   既不破坏静默感，也不会让人完全发现不了。
+
+   为什么不用 span + contenteditable：输入数字需要的是数字键盘、上下键、
+   以及浏览器自带的 min/max 校验，原生 number 输入框免费给全部这些。
+   -------------------------------------------------------------------------- */
+.slider-row__valwrap {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  padding: 2px 6px;
+  margin: -2px -6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  transition: background-color var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out);
+}
+.slider-row__valwrap:hover {
+  background: var(--bg-sunken);
+  border-color: var(--border-subtle);
+}
+.slider-row__valwrap:focus-within {
+  background: var(--bg-surface);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.slider-row__num {
+  width: 4.2em;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent-text);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  /* 去掉原生上下箭头：太小难点、还占宽度；需要微调时用键盘上下键更准 */
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.slider-row__num:focus { outline: none; box-shadow: none; }
+.slider-row__num::-webkit-outer-spin-button,
+.slider-row__num::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+.slider-row__unit {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  user-select: none;
+}
+
+/* 单位必须显示出来：数值输入框里只能放纯数字（type=number 不接受「2.5%」，
+   浏览器会直接把它清空成空白框），单位只能交给旁边这个 span。
+   design-system.css 尾部为了「纯文字外观」隐藏过 .slider-row__unit，
+   但那是给已废弃的 .slider-row__io 结构用的；当前模板用的是 valwrap 结构，
+   所以这里显式恢复显示，否则右侧会只剩一个空数字框。 */
+.slider-row__valwrap .slider-row__unit { display: inline; }

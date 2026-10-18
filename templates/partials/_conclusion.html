@@ -1,0 +1,15 @@
+
+{% if conclusions %}
+    <div class="conclusion-list">
+        {% for item in conclusions %}
+            <article class="conclusion{% if item.level == 'warn' %} conclusion--warn{% elif item.level == 'danger' %} conclusion--down{% endif %}">
+                <div>
+                    <h3 class="conclusion__title">{{ item.title }}</h3>
+                    <div class="conclusion__body">{{ item.body|linebreaksbr }}</div>
+                </div>
+            </article>
+        {% endfor %}
+    </div>
+{% else %}
+    {% include "partials/_empty_state.html" with empty_icon="info" empty_title="暂无结论" empty_hint="当前条件的数据量不足以形成结论，或相关模块取数失败（见页面顶部的提示）。先放宽筛选条件，再回来看结论。" %}
+{% endif %}

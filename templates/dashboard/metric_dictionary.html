@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block filter_bar %}
+    <form class="filter-bar" method="get" action="" data-filter-form>
+        <div class="filter-bar__grid">
+            <div class="field">
+                <label class="field__label" for="metricDomain">指标域</label>
+                <select id="metricDomain" name="domain">
+                    <option value="">全部域</option>
+                    {% for option in domain_options %}
+                        <option value="{{ option.value }}"{% if selected_domain == option.value %} selected{% endif %}>{{ option.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field">
+                <label class="field__label" for="metricQuery">关键词</label>
+                <input type="text" id="metricQuery" name="q" value="{{ keyword }}"
+                       placeholder="编码 / 名称 / 定义，例如 毛利率">
+                <span class="field__hint">匹配编码、名称与业务定义，回车即可查询</span>
+            </div>
+        </div>
+        <div class="filter-bar__foot">
+            <div class="filter-bar__tags">
+                {% if selected_domain %}<span class="tag">指标域 {{ selected_domain }}</span>{% endif %}
+                {% if keyword %}<span class="tag">关键词 {{ keyword }}</span>{% endif %}
+                {% if not selected_domain and not keyword %}
+                    <span class="tag tag--muted">未设置条件，当前展示全部域的全部指标</span>
+                {% endif %}
+            </div>
+            <button type="submit" class="btn btn--primary btn--small">筛选</button>
+            <a class="btn btn--ghost btn--small" href="{% url 'dashboard:metric_dictionary' %}">重置</a>
+        </div>
+    </form>
+{% endblock %}
+
+{% block page_question %}这些数字到底是怎么算出来的？口径不透明的分析系统，数字再漂亮也没人敢用。{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn--ghost btn--small" href="{% url 'api:metrics' %}">接口形式获取（/api/v1/metrics/）</a>
+{% endblock %}
+
+{% block content %}
+    {% include "partials/_kpi_cards.html" %}
+
+    {% include "partials/_chart_loop.html" %}
+
+    {% if groups %}
+        {% for group in groups %}
+            <section class="section">
+                <div class="section__head">
+                    <h2 class="section__title">{{ group.domain }}</h2>
+                    <span class="section__note">{{ group.metrics|length }} 条指标</span>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <caption class="sr-only">{{ group.domain }} 域下的指标口径、公式、来源表与易误读提醒</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">编码</th>
+                                <th scope="col">名称</th>
+                                <th scope="col">类型</th>
+                                <th scope="col">业务定义</th>
+                                <th scope="col">公式</th>
+                                <th scope="col">分子</th>
+                                <th scope="col">分母</th>
+                                <th scope="col">单位</th>
+                                <th scope="col">来源表</th>
+                                <th scope="col">易误读提醒</th>
+                                <th scope="col">版本</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for metric in group.metrics %}
+                                <tr>
+                                    <td><code>{{ metric.code }}</code></td>
+                                    <td>{{ metric.name }}</td>
+                                    <td>
+                                        {% if metric.metric_type == 'amount' %}金额
+                                        {% elif metric.metric_type == 'count' %}数量
+                                        {% elif metric.metric_type == 'ratio' %}比率
+                                        {% elif metric.metric_type == 'index' %}指数
+                                        {% elif metric.metric_type == 'growth' %}增长率
+                                        {% else %}{{ metric.metric_type }}{% endif %}
+                                    </td>
+                                    <td>{{ metric.definition }}</td>
+                                    <td><code>{{ metric.formula }}</code></td>
+                                    <td>{{ metric.numerator_desc }}</td>
+                                    <td>{{ metric.denominator_desc }}</td>
+                                    <td>{{ metric.unit }}</td>
+                                    <td>{{ metric.source_tables|join:"、" }}</td>
+                                    <td>{{ metric.caveat }}</td>
+                                    <td>{{ metric.version }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        {% endfor %}
+    {% else %}
+        <section class="card">
+            <div class="card__body">
+                {% include "partials/_empty_state.html" with empty_icon="metrics" empty_title="没有匹配的指标" empty_hint="试试清空关键词，或把「指标域」切回「全部域」；也可以直接用编码搜索，例如 M_GROSS_MARGIN。" %}
+            </div>
+        </section>
+    {% endif %}
+
+    <section class="section">
+        <div class="section__head">
+            <h2 class="section__title">指标拆解关系（来自 METRIC_TREE_SPEC）</h2>
+            <span class="section__note">relation_type：component 组合 / driver 驱动 / quality 质量</span>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <caption class="sr-only">指标之间的拆解与驱动关系</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">父指标</th>
+                        <th scope="col">子指标</th>
+                        <th scope="col">关系类型</th>
+                        <th scope="col">说明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for relation in tree_spec %}
+                        <tr>
+                            <td><code>{{ relation.parent_code }}</code></td>
+                            <td><code>{{ relation.child_code }}</code></td>
+                            <td>
+                                {% if relation.relation_type == 'component' %}组合
+                                {% elif relation.relation_type == 'driver' %}驱动
+                                {% elif relation.relation_type == 'quality' %}质量
+                                {% else %}{{ relation.relation_type }}{% endif %}
+                            </td>
+                            <td>{{ relation.note }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4" class="is-muted">暂无拆解关系记录</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+{% endblock %}

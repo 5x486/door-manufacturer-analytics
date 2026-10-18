@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block page_question %}订单能不能按时交？延期到底卡在哪一段？准时率是结果，阶段耗时才是原因。{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn--ghost btn--small" href="{% url 'dashboard:simulator' %}{% if filter_query %}?{{ filter_query }}{% endif %}">模拟延期对毛利的影响</a>
+    <a class="btn btn--ghost btn--small" href="{% url 'dashboard:order_list' %}{% if filter_query %}?{{ filter_query }}{% endif %}">查看延期订单明细</a>
+{% endblock %}
+
+{% block content %}
+    {% include "partials/_kpi_cards.html" %}
+
+    <div class="callout callout--warn">
+        <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="alert" %}</span>
+        <div>
+            口径提醒：准时交付率的分母<strong>只含已交付订单</strong>（is_on_time 为 0 或 1）；
+            在途订单（-1）不计入。把它们算进分母，会让准时率随订单积压虚假下降。
+            当前样本量 {{ performance.sample_orders|default:0 }} 单，样本过小时结论仅供参考。
+        </div>
+    </div>
+
+    {% include "partials/_chart_loop.html" %}
+
+    {% include "partials/_data_table.html" with table=stage_table %}
+    {% include "partials/_data_table.html" with table=after_table %}
+    {% include "partials/_data_table.html" with table=delay_table %}
+{% endblock %}

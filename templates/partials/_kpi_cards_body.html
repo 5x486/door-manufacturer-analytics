@@ -1,0 +1,68 @@
+
+{% if kpis %}
+    <div class="kpi-grid">
+        {% for item in kpis %}
+            <article class="kpi{% if forloop.first %} kpi--lead{% endif %}">
+                <div class="kpi__label">
+                    <span>{{ item.label }}</span>
+                    {% if item.metric_code %}
+
+                        <button type="button" class="metric-tip"
+                                aria-label="查看「{{ item.label }}」的口径说明">
+                            ?
+                            <span class="metric-tip__body" role="tooltip">
+                                <span class="metric-tip__code">{{ item.metric_code }}</span>
+                                {% if card_metrics %}
+                                    {% for code, metric in card_metrics.items %}
+                                        {% if code == item.metric_code %}
+                                            <strong>{{ metric.name }}</strong>（单位：{{ metric.unit }}）<br>
+                                            {{ metric.definition }}<br>
+                                            <em>公式：{{ metric.formula }}</em><br>
+                                            <em>分子：{{ metric.numerator_desc }}</em><br>
+                                            <em>分母：{{ metric.denominator_desc }}</em><br>
+                                            易误读提醒：{{ metric.caveat }}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    口径说明见「指标字典」页。
+                                {% endif %}
+                            </span>
+                        </button>
+                    {% endif %}
+                </div>
+
+                {% if item.raw_value is not None %}
+
+                    <div class="kpi__value" data-kpi-value="{{ item.raw_value }}"
+                         data-kpi-digits="{{ item.digits|default:0 }}"
+                         data-kpi-prefix="{{ item.prefix|default:'' }}"
+                         data-kpi-suffix="{{ item.suffix|default:'' }}">{{ item.value|default:"-" }}</div>
+                {% else %}
+                    <div class="kpi__value">{{ item.value|default:"-" }}{% if item.unit %}<span class="kpi__unit">{{ item.unit }}</span>{% endif %}</div>
+                {% endif %}
+
+                {% if item.trend.text or item.status %}
+                    <div class="kpi__foot">
+                        {% if item.trend.text %}
+                            <span class="delta {% if item.trend.good == False %}delta--down{% elif item.trend.direction == 'up' %}delta--up{% elif item.trend.direction == 'down' %}delta--down{% else %}delta--flat{% endif %}">
+                                {% if item.trend.direction == 'up' %}<span class="delta__arrow" aria-hidden="true">▲</span>
+                                {% elif item.trend.direction == 'down' %}<span class="delta__arrow" aria-hidden="true">▼</span>
+                                {% else %}<span class="delta__arrow" aria-hidden="true">·</span>{% endif %}
+                                <span>{{ item.trend.text }}</span>
+                            </span>
+                        {% endif %}
+                        {% if item.status == 'warn' %}<span class="badge badge--warn">需关注</span>
+                        {% elif item.status == 'danger' %}<span class="badge badge--down">有风险</span>
+                        {% elif item.status == 'good' %}<span class="badge badge--up">健康</span>
+                        {% elif item.status == 'primary' %}<span class="badge badge--accent">主指标</span>{% endif %}
+                    </div>
+                {% endif %}
+
+                {% if item.sub %}<div class="kpi__sub">{{ item.sub }}</div>{% endif %}
+                {% if item.note %}<div class="kpi__sub">{{ item.note }}</div>{% endif %}
+            </article>
+        {% endfor %}
+    </div>
+{% else %}
+    {% include "partials/_empty_state.html" with empty_icon="overview" empty_title="暂无指标数据" empty_hint="当前筛选条件下没有可用数据，请放宽条件，或确认数据是否已导入。" %}
+{% endif %}

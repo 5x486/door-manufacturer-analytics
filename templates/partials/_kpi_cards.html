@@ -1,0 +1,9 @@
+
+
+{% if metrics %}
+    {% with card_metrics=metrics %}{% include "partials/_kpi_cards_body.html" %}{% endwith %}
+{% elif metric_map %}
+    {% with card_metrics=metric_map %}{% include "partials/_kpi_cards_body.html" %}{% endwith %}
+{% else %}
+    {% include "partials/_kpi_cards_body.html" with card_metrics=False %}
+{% endif %}

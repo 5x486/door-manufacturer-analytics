@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block page_question %}哪类门真正在赚钱？折扣到底让掉了多少毛利？收入结构决定规模，毛利结构决定能不能活。{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn--ghost btn--small" href="{% url 'dashboard:simulator' %}{% if filter_query %}?{{ filter_query }}{% endif %}">模拟提价 / 材料涨价</a>
+    <a class="btn btn--ghost btn--small" href="{% url 'dashboard:order_list' %}{% if filter_query %}?{{ filter_query }}{% endif %}">查看明细数据</a>
+{% endblock %}
+
+{% block content %}
+    {% include "partials/_kpi_cards.html" %}
+
+    {% include "partials/_chart_loop.html" %}
+
+    {% include "partials/_data_table.html" with table=category_table %}
+    {% include "partials/_data_table.html" with table=sku_table %}
+    {% include "partials/_data_table.html" with table=discount_table %}
+
+    {% if quadrant.quadrants %}
+        <section class="section">
+            <div class="section__head">
+                <h2 class="section__title">四象限归类（营收占比 vs 毛利占比）</h2>
+                <span class="section__note">分界线：平均占比 = 1 ÷ SKU 数（{{ quadrant.sku_count }} 个 SKU）</span>
+            </div>
+            <div class="grid grid--2">
+                {% for key, group in quadrant.quadrants.items %}
+                    <article class="conclusion{% if key == 'drag' %} conclusion--down{% elif key != 'star' %} conclusion--warn{% endif %}">
+                        <div>
+                            <h3 class="conclusion__title">
+                                <span>{{ group.name }}</span>
+                                <span class="badge badge--info">{{ group.count }} 个</span>
+                            </h3>
+                            <div class="conclusion__body">
+                                {{ group.note }}<br>
+                                <span class="text-muted">
+                                    代表 SKU：
+                                    {% for sku in group.items|slice:":5" %}
+                                        {{ sku.product_name|default:sku.product_code }}{% if not forloop.last %}、{% endif %}
+                                    {% empty %}
+                                        暂无
+                                    {% endfor %}
+                                </span>
+                            </div>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+{% endblock %}

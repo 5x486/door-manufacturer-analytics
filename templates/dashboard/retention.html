@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block page_question %}客户还回来吗？该在什么时候给谁打电话？留存看趋势，预警看名单，两者缺一不可。{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn--ghost btn--small" href="{% url 'dashboard:customers' %}{% if filter_query %}?{{ filter_query }}{% endif %}">看客群结构</a>
+    <a class="btn btn--primary btn--small" href="{% url 'dashboard:order_list' %}{% if filter_query %}?{{ filter_query }}{% endif %}">导出明细做触达</a>
+{% endblock %}
+
+{% block content %}
+    {% include "partials/_kpi_cards.html" %}
+
+    <div class="callout callout--info">
+        <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="info" %}</span>
+        <div>
+            读图提示：热力图里的<strong>空白格表示该队列还没走到那个月</strong>，不是「留存为 0」。
+            把空白读成流失，是留存分析最常见的误判。
+        </div>
+    </div>
+
+    {% include "partials/_chart_loop.html" %}
+
+    {% include "partials/_data_table.html" with table=churn_table %}
+
+    <section class="card">
+        <div class="card__head">
+            <div>
+                <h3 class="card__title">队列留存数据（供核对与导出）</h3>
+                <div class="card__desc">每一行是一个首单月份队列</div>
+            </div>
+        </div>
+        {% if cohort.cohorts %}
+            <div class="table-wrap">
+                <table class="data-table">
+                    <caption class="sr-only">客户留存队列矩阵：行是首单月份队列，列是第 N 月的留存率</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">队列（首单月份）</th>
+                            <th scope="col" class="is-number">队列人数</th>
+                            {% for index in "0123456789"|make_list %}
+                                <th scope="col" class="is-number">第 {{ forloop.counter0 }} 月</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in cohort.cohorts %}
+                            <tr>
+                                <td>{{ row.cohort_month }}</td>
+                                <td class="is-number">{{ row.customer_count }}</td>
+                                {% for value in row.retention|slice:":10" %}
+                                    <td class="is-number">
+                                        {% if value is None %}-{% else %}{{ value|floatformat:3 }}{% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="card__body">
+                <div class="callout callout--info">
+                    <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="info" %}</span>
+                    <div>
+                        表格里的「-」对应热力图的空白格：该队列尚未走到该月，属正常现象，不是留存为 0。
+                        未到期的格子不参与任何平均值计算。
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="card__body">
+                {% include "partials/_empty_state.html" with empty_icon="retention" empty_title="暂无队列留存数据" empty_hint="预聚合表 dws_customer_cohort 可能尚未构建，或当前筛选条件下没有客户队列。可以先放宽筛选条件，或换一个期间。" %}
+            </div>
+        {% endif %}
+    </section>
+{% endblock %}

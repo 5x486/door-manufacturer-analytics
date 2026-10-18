@@ -1,0 +1,17 @@
+{% comment %}
+入场编排的启动脚本（三处共用：base.html / 登录页 / 退出页）。
+为什么单独一个 partial：这段逻辑必须逐字一致，否则会出现「某些页面动画在、
+某些页面不闪烁」的不一致，而这类问题极难复现。
+
+两件事：
+1. 如果这次是从上一页「跨页转场」过来的，就不做入场编排。
+   转场本身已经在动，再叠一层入场会让新页面在快照里是「空的」，
+   转场就会变成「淡入一张白纸，然后内容突然出现」。
+2. 否则在首帧之前加 motion-init 隐藏待编舞元素，并挂 1.6 秒兜底：
+   motion.js 没跑起来就把内容全部显示，宁可没有动画也不能丢内容。
+
+注意：pageswap 监听必须无条件注册。它标记「下一次导航会走转场」，
+如果只在「本次没走转场」的分支里注册，那么一旦有一次转场发生，
+后续页面就再也收不到标记，跨页转场会退化成闪白。
+{% endcomment %}
+<script>(function(){var d=document.documentElement;window.addEventListener('pageswap',function(){try{sessionStorage.setItem('dsh-vt-nav','1');}catch(e){}});var vt=false;try{vt=sessionStorage.getItem('dsh-vt-nav')==='1';sessionStorage.removeItem('dsh-vt-nav');}catch(e){}if(vt){d.classList.add('vt-nav');return;}try{if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;}catch(e){}d.classList.add('motion-init');window.__dshMotionTimer=setTimeout(function(){if(!window.__dshMotionReady)d.classList.add('motion-fallback');},1600);})();</script>

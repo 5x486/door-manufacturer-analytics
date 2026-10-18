@@ -1,0 +1,6 @@
+
+{% if charts|length > 1 %}<div class="grid grid--2">{% endif %}
+{% for item in charts %}
+    {% include "partials/_chart.html" with chart_id=item.chart_id chart_title=item.chart_title chart_option=item.chart_option chart_height=item.chart_height chart_conclusion=item.chart_conclusion drill_dimension=item.drill_dimension drill_api=item.drill_api %}
+{% endfor %}
+{% if charts|length > 1 %}</div>{% endif %}

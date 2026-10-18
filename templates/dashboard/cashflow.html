@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block page_question %}还有多少钱没收回来？未来 13 周能回多少？应收决定现金安全，账龄结构决定坏账风险。{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn--ghost btn--small" href="{% url 'dashboard:customers' %}{% if filter_query %}?{{ filter_query }}{% endif %}">看客户价值</a>
+    <a class="btn btn--ghost btn--small" href="{% url 'dashboard:order_list' %}{% if filter_query %}?{{ filter_query }}{% endif %}">查看订单明细</a>
+{% endblock %}
+
+{% block content %}
+    {% include "partials/_kpi_cards.html" %}
+
+    {% if receivables.as_of_date %}
+        <p class="text-muted">
+            账龄切点：<strong>{{ receivables.as_of_date }}</strong>（数据基准日）。
+            账龄一律以该日为切点计算：脱离切点的账龄没有意义，跨版本对比前请先对齐切点。
+        </p>
+    {% endif %}
+
+    {% include "partials/_chart_loop.html" %}
+
+    {% include "partials/_data_table.html" with table=aging_table %}
+
+    <section class="section">
+        <div class="section__head">
+            <h2 class="section__title">回款预测的三条假设</h2>
+            <span class="section__note">预测必须连同假设一起展示，否则数字会被过度解读</span>
+        </div>
+        <dl class="definition-list">
+            <dt>假设 1：回款节奏</dt>
+            <dd>应收账款余额在未来 13 周内按<strong>恒定周回收率</strong>回笼；回收率 = 过去 13 周实际回款 ÷ 期末应收余额，并收敛到 1.5% 至 8%。</dd>
+            <dt>假设 2：忽略项</dt>
+            <dd>忽略客户经营突变、催收力度加强与季节性（门业 12 月至次年 1 月回款明显偏慢）。</dd>
+            <dt>假设 3：口径范围</dt>
+            <dd>只含<strong>已发生的应收</strong>，不含未来新签合同的回款。</dd>
+        </dl>
+        <p class="text-muted">结论：它是排产与备料的现金参考，不是财务预算数。</p>
+    </section>
+
+    {% include "partials/_data_table.html" with table=forecast_table %}
+    {% include "partials/_data_table.html" with table=top_table %}
+{% endblock %}

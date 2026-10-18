@@ -1,0 +1,293 @@
+{% load static %}<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}{{ page_title|default:"经营分析" }} · {{ project_name|default:"杭博门业经营分析系统" }}{% endblock %}</title>
+    <meta name="description" content="杭博门业经营分析系统：面向定制门制造企业的经营数据分析看板，全部数据为模拟数据。">
+
+    {# 内联 SVG favicon：一扇门。没有任何外部请求，也就不会有 /favicon.ico 的 404 #}
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23257070'/%3E%3Crect x='18' y='13' width='28' height='38' rx='2' fill='none' stroke='%23ffffff' stroke-width='4'/%3E%3Ccircle cx='39' cy='34' r='2.6' fill='%23ffffff'/%3E%3C/svg%3E">
+
+    <script>(function(){try{var t=localStorage.getItem('dsh-theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+
+    {# 入场编排的预备状态：首帧前隐藏待编舞元素，并挂 1.6 秒兜底（逻辑见 partial） #}
+    {% include "partials/_motion_boot.html" %}
+
+    <link rel="stylesheet" href="{% static 'css/design-system.css' %}?v={{ static_version }}">
+    <link rel="stylesheet" href="{% static 'css/slider.css' %}?v={{ static_version }}">
+    {# 动效与材质层：只做叠加，不改设计系统本体，可整份移除 #}
+    <link rel="stylesheet" href="{% static 'css/motion-layer.css' %}?v={{ static_version }}">
+
+    <style>
+        /* 主题切换按钮里的一对图标（moon 表示「切到深色」，sun 表示「切到浅色」）。
+           设计系统只给了 token 与组件类，没有定义这对图标的显隐规则；为不改动
+           交付件 design-system.css，这里用 data-theme-icon 属性选择器兜底。
+           显隐判定与 design-system.css 的 token 切换点保持一致（只看 data-theme="dark"）：
+           未设置 data-theme 时按浅色处理，与 :root 默认 token 一致。 */
+        [data-theme-icon] { display: none; width: 16px; height: 16px; }
+        :root:not([data-theme="dark"]) [data-theme-icon="light"],
+        :root[data-theme="dark"] [data-theme-icon="dark"] { display: grid; place-items: center; }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+<a class="skip-link" href="#mainContent">跳到主要内容</a>
+
+<div class="app-shell">
+
+    
+
+    
+
+    
+    <aside class="sidebar" id="appSidebar">
+        <div class="sidebar__brand">
+            <span class="sidebar__mark" aria-hidden="true">杭</span>
+            <div>
+                <div class="sidebar__name">{{ project_name|default:"杭博门业经营分析系统" }}</div>
+                <div class="sidebar__sub">
+                    {{ company_profile.short_name|default:"杭博门业" }} ·
+                    {{ company_profile.city|default:"浙江桐乡" }} ·
+                    数据截至 {{ data_as_of_iso|default:data_as_of|default:"-" }}
+                </div>
+            </div>
+        </div>
+
+        <nav class="sidebar__nav" aria-label="主导航">
+            {% regroup nav_modules|default:nav_groups by group as nav_grouped %}
+            {% for group in nav_grouped %}
+                <div class="nav-group">
+                    <div class="nav-group__title">{{ group.grouper|default:"导航" }}</div>
+                    {% for module in group.list %}
+                        <a class="nav-item{% if module.key == current_module_key or module.key == current_module.key %} is-active{% endif %}{% if not module.route_ready %} is-disabled{% endif %}"
+                           href="{{ module.url|default:'#' }}"
+                           {% if module.key == current_module_key or module.key == current_module.key %}aria-current="page"{% endif %}
+                           title="{{ module.description|default:module.name }}{% if not module.route_ready %}（该模块路由尚未注册，链接暂不可用）{% endif %}">
+                            <span class="nav-item__icon" aria-hidden="true">{% if module.key == 'overview' %}{% include "partials/_icon.html" with name="overview" %}{% elif module.key == 'growth' %}{% include "partials/_icon.html" with name="growth" %}{% elif module.key == 'category' or module.key == 'profit' %}{% include "partials/_icon.html" with name="profit" %}{% elif module.key == 'customer' or module.key == 'customers' %}{% include "partials/_icon.html" with name="customers" %}{% elif module.key == 'retention' %}{% include "partials/_icon.html" with name="retention" %}{% elif module.key == 'delivery' %}{% include "partials/_icon.html" with name="delivery" %}{% elif module.key == 'cashflow' %}{% include "partials/_icon.html" with name="cashflow" %}{% elif module.key == 'workforce' %}{% include "partials/_icon.html" with name="workforce" %}{% elif module.key == 'simulation' or module.key == 'simulator' %}{% include "partials/_icon.html" with name="simulator" %}{% elif module.key == 'quality' or module.key == 'data_quality' %}{% include "partials/_icon.html" with name="dq" %}{% elif module.key == 'models' or module.key == 'model' %}{% include "partials/_icon.html" with name="model" %}{% elif module.key == 'metrics' %}{% include "partials/_icon.html" with name="metrics" %}{% elif module.key == 'detail' or module.key == 'orders' %}{% include "partials/_icon.html" with name="orders" %}{% else %}{% include "partials/_icon.html" with name="overview" %}{% endif %}</span>
+                            <span>{{ module.name }}</span>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% empty %}
+
+                {% url 'dashboard:overview' as nav_overview %}
+                {% url 'dashboard:growth' as nav_growth %}
+                {% url 'dashboard:profit' as nav_profit %}
+                {% url 'dashboard:customers' as nav_customers %}
+                {% url 'dashboard:retention' as nav_retention %}
+                {% url 'dashboard:delivery' as nav_delivery %}
+                {% url 'dashboard:cashflow' as nav_cashflow %}
+                {% url 'dashboard:workforce' as nav_workforce %}
+                {% url 'dashboard:simulator' as nav_simulator %}
+                {% url 'dashboard:data_quality' as nav_dq %}
+                {% url 'dashboard:model_online' as nav_model %}
+                {% url 'dashboard:metric_dictionary' as nav_metrics %}
+                {% url 'dashboard:order_list' as nav_orders %}
+                <div class="nav-group">
+                    <div class="nav-group__title">核心</div>
+                    <a class="nav-item{% if current_module_key == 'overview' %} is-active{% endif %}" href="{{ nav_overview }}"><span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="overview" %}</span><span>经营总览</span></a>
+                    <a class="nav-item{% if current_module_key == 'growth' %} is-active{% endif %}" href="{{ nav_growth }}"><span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="growth" %}</span><span>增长与渠道</span></a>
+                    <a class="nav-item{% if current_module_key == 'profit' or current_module_key == 'category' %} is-active{% endif %}" href="{{ nav_profit }}"><span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="profit" %}</span><span>品类与利润</span></a>
+                </div>
+                <div class="nav-group">
+                    <div class="nav-group__title">客户与留存</div>
+                    <a class="nav-item{% if current_module_key == 'customers' or current_module_key == 'customer' %} is-active{% endif %}" href="{{ nav_customers }}"><span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="customers" %}</span><span>客户价值</span></a>
+                    <a class="nav-item{% if current_module_key == 'retention' %} is-active{% endif %}" href="{{ nav_retention }}"><span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="retention" %}</span><span>留存与预警</span></a>
+                </div>
+                <div class="nav-group">
+                    <div class="nav-group__title">履约与现金</div>
+                    <a class="nav-item{% if current_module_key == 'delivery' %} is-active{% endif %}" href="{{ nav_delivery }}"><span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="delivery" %}</span><span>交付与售后</span></a>
+                    <a class="nav-item{% if current_module_key == 'cashflow' %} is-active{% endif %}" href="{{ nav_cashflow }}"><span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="cashflow" %}</span><span>回款与现金流</span></a>
+                </div>
+                <div class="nav-group">
+                    <div class="nav-group__title">效率与治理</div>
+                    <a class="nav-item{% if current_module_key == 'workforce' %} is-active{% endif %}" href="{{ nav_workforce }}"><span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="workforce" %}</span><span>人效与门店</span></a>
+                    <a class="nav-item{% if current_module_key == 'simulator' or current_module_key == 'simulation' %} is-active{% endif %}" href="{{ nav_simulator }}"><span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="simulator" %}</span><span>决策模拟</span></a>
+                    <a class="nav-item{% if current_module_key == 'data_quality' or current_module_key == 'quality' %} is-active{% endif %}" href="{{ nav_dq }}"><span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="dq" %}</span><span>数据质量</span></a>
+                    <a class="nav-item{% if current_module_key == 'models' %} is-active{% endif %}" href="{{ nav_model }}"><span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="model" %}</span><span>模型在线</span></a>
+                    <a class="nav-item{% if current_module_key == 'metrics' %} is-active{% endif %}" href="{{ nav_metrics }}"><span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="metrics" %}</span><span>指标字典</span></a>
+                    <a class="nav-item{% if current_module_key == 'detail' %} is-active{% endif %}" href="{{ nav_orders }}"><span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="orders" %}</span><span>明细数据</span></a>
+                </div>
+            {% endfor %}
+        </nav>
+
+        <div class="sidebar__foot">
+            模拟数据 · 仅用于演示分析方法 · 不可用于对外披露
+        </div>
+    </aside>
+
+    <main class="main" id="mainContent">
+
+        
+
+        <header class="topbar">
+            <button type="button" class="hamburger icon-btn" id="sidebarToggle"
+                    aria-label="展开或收起导航" aria-expanded="false" aria-controls="appSidebar">
+                <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="menu" %}</span>
+            </button>
+
+            <nav class="topbar__crumbs" aria-label="面包屑">
+                <a class="crumb" href="{% url 'dashboard:overview' %}">首页</a>
+                <span class="crumb crumb--sep" aria-hidden="true">›</span>
+                <span class="crumb crumb--current">{{ current_module.name|default:page_title|default:"经营分析" }}</span>
+            </nav>
+
+            <div class="topbar__spacer"></div>
+
+            <div class="topbar__meta">
+                <span>数据基准日 <b>{{ data_as_of_iso|default:data_as_of|default:"-" }}</b></span>
+                <span class="badge badge--warn" title="{{ data_disclaimer|default:'本系统数据均为模拟数据' }}">模拟数据</span>
+            </div>
+
+            <button type="button" class="icon-btn" id="themeToggle" aria-label="切换深色或浅色主题" title="切换深色或浅色主题">
+                <span data-theme-icon="light" aria-hidden="true">{% include "partials/_icon.html" with name="moon" %}</span>
+                <span data-theme-icon="dark" aria-hidden="true">{% include "partials/_icon.html" with name="sun" %}</span>
+            </button>
+
+            <div class="user-menu">
+                {% if user.is_authenticated %}
+                    <span class="user-menu__avatar" aria-hidden="true">{{ user.display_name|default:user.get_username|slice:":1" }}</span>
+                    <span class="text-muted">{{ user.display_name|default:user.get_username }}</span>
+                    <form method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn--ghost btn--small">退出</button>
+                    </form>
+                {% else %}
+                    <a class="btn btn--primary btn--small" href="{% url 'login' %}?next={{ request.path }}">登录</a>
+                {% endif %}
+            </div>
+        </header>
+
+        <div class="content">
+            <div class="page-head">
+                <div class="page-head__row">
+                    <div>
+                        <div class="page-head__eyebrow">{{ current_module.name|default:page_title|default:"经营分析" }}</div>
+                        <h1 class="page-head__title">{% block page_title %}{{ page_title }}{% endblock %}</h1>
+                        <p class="page-head__question">{% block page_question %}{{ page_subtitle }}{% endblock %}</p>
+                    </div>
+                    <div class="card__actions">
+                        {% block page_actions %}
+                            <a class="btn btn--ghost btn--small" href="{% url 'dashboard:metric_dictionary' %}">查看指标口径</a>
+                            <a class="btn btn--ghost btn--small" href="{% url 'dashboard:order_list' %}{% if filter_query %}?{{ filter_query }}{% endif %}">查看明细数据</a>
+                        {% endblock %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid">
+                {% if warnings %}
+                    <div class="grid" role="status">
+                        {% for warning in warnings %}
+                            <div class="callout callout--warn">
+                                <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="alert" %}</span>
+                                <div>{{ warning }}</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% block filter_bar %}
+                    {% include "partials/_filter_bar.html" %}
+                {% endblock %}
+
+                {% block content %}{% endblock %}
+
+                {% block conclusions %}
+                    {% if conclusions %}
+                        <section class="section">
+                            <div class="section__head">
+                                <h2 class="section__title">结论与建议</h2>
+                                <span class="section__note">每条结论都给出「所以建议……」的落地动作</span>
+                            </div>
+                            {% include "partials/_conclusion.html" %}
+                        </section>
+                    {% endif %}
+                {% endblock %}
+
+                {% if metric_definitions %}
+                    <section class="section">
+                        <div class="section__head">
+                            <h2 class="section__title">本页涉及的指标口径</h2>
+                            <span class="section__note">完整字典见「指标字典」页</span>
+                        </div>
+                        <div class="table-wrap">
+                            <table class="data-table">
+                                <caption class="sr-only">本页 KPI 所用指标的口径、公式与易误读提醒</caption>
+                                <thead>
+                                    <tr>
+                                        <th scope="col">编码</th>
+                                        <th scope="col">指标名称</th>
+                                        <th scope="col">业务定义</th>
+                                        <th scope="col">公式</th>
+                                        <th scope="col">单位</th>
+                                        <th scope="col">易误读提醒</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for metric in metric_definitions %}
+                                        <tr>
+                                            <td><code>{{ metric.code }}</code></td>
+                                            <td>{{ metric.name }}</td>
+                                            <td>{{ metric.definition }}</td>
+                                            <td>{{ metric.formula }}</td>
+                                            <td>{{ metric.unit }}</td>
+                                            <td>{{ metric.caveat }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                {% endif %}
+
+                <footer class="foot">
+                    <div>{{ data_disclaimer|default:"本系统展示的全部数据均为按固定随机种子生成的模拟数据，仅用于演示经营分析方法与系统功能，不代表任何真实企业的经营情况。" }}</div>
+                    <div>
+                        {{ company_profile.name|default:"浙江杭博门业有限公司" }} ·
+                        {{ company_profile.business|default:"" }} ·
+                        数据版本 <code>{{ data_version|default:"unknown" }}</code> ·
+                        数据基准日 {{ data_as_of_iso|default:data_as_of|default:"-" }}
+                    </div>
+                </footer>
+            </div>
+        </div>
+    </main>
+</div>
+
+<aside class="drawer" id="drillDrawer" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="drillDrawerTitle">
+  <div class="drawer__scrim" data-drawer-close></div>
+  <div class="drawer__panel">
+    <div class="drawer__head">
+      <div>
+        <div class="drawer__title" id="drillDrawerTitle">明细数据</div>
+        <div class="drawer__sub" id="drillDrawerSubtitle"></div>
+      </div>
+      <div class="card__actions">
+        <button type="button" class="icon-btn" data-drawer-close aria-label="关闭明细"><span class="nav-item__icon">{% include "partials/_icon.html" with name="close" %}</span></button>
+      </div>
+    </div>
+    <div class="drawer__body" id="drillDrawerBody"></div>
+  </div>
+</aside>
+
+<script src="{% static 'vendor/echarts.min.js' %}"></script>
+<script src="{% static 'js/site.js' %}?v={{ static_version }}"></script>
+<script src="{% static 'js/motion.js' %}?v={{ static_version }}"></script>
+<script src="{% static 'js/simulator.js' %}?v={{ static_version }}"></script>
+<script>
+    // 图表库降级提示：本地 static 文件缺失时明确告知，而不是留一片空白。
+    // 用 .empty-state 呈现，并说明「表格与结论仍然可用」，避免用户以为整页坏了。
+    if (typeof echarts === 'undefined') {
+        document.querySelectorAll('.chart-box').forEach(function (el) {
+            el.innerHTML = '<div class="empty-state">' +
+                '<div class="empty-state__title">图表暂不可用</div>' +
+                '<div class="empty-state__desc">未找到 static/vendor/echarts.min.js。页面上的数据表格与结论仍然完整可用，图表只是阅读增强项。</div>' +
+                '</div>';
+        });
+    }
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

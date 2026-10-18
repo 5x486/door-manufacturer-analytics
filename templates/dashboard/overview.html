@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block page_question %}今年到底赚了多少？比去年好还是差？先看总量与结构，再决定下钻哪一块。{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn--ghost btn--small" href="{% url 'dashboard:growth' %}{% if filter_query %}?{{ filter_query }}{% endif %}">下钻渠道</a>
+    <a class="btn btn--ghost btn--small" href="{% url 'dashboard:profit' %}{% if filter_query %}?{{ filter_query }}{% endif %}">下钻品类利润</a>
+    <a class="btn btn--primary btn--small" href="{% url 'dashboard:simulator' %}{% if filter_query %}?{{ filter_query }}{% endif %}">做一次决策模拟</a>
+{% endblock %}
+
+{% block content %}
+    {% include "partials/_kpi_cards.html" %}
+
+    {% if kpi_raw.source %}
+        <div class="callout callout--info">
+            <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="info" %}</span>
+            <div>
+                本次指标口径来源：<code>{{ kpi_raw.source }}</code>
+                {% if kpi_raw.source == 'fact' %}
+                    （预聚合表未覆盖当前筛选条件或尚未构建，已回退明细实时计算。口径一致，但查询更慢，且没有按日粒度。）
+                {% else %}
+                    （预聚合表口径，与趋势图一致；筛选条件超出预聚合维度时会自动回退实时计算。）
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+    {% include "partials/_chart_loop.html" %}
+
+    {% include "partials/_data_table.html" with table=year_table %}
+    {% include "partials/_data_table.html" with table=region_table %}
+{% endblock %}

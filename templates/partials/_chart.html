@@ -1,0 +1,40 @@
+
+<section class="card">
+    <div class="card__head">
+        <div>
+            <h3 class="card__title">{{ chart_title|default:"图表" }}</h3>
+            <div class="card__desc">数值可在本页下方数据表格中逐条核对</div>
+        </div>
+        <div class="card__actions">
+            {% if drill_dimension %}
+                <span class="badge badge--info" title="点击图形元素可下钻到对应订单明细">可下钻</span>
+            {% endif %}
+            <button type="button" class="btn btn--quiet btn--small" data-chart-export="{{ chart_id }}">
+                <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="download" %}</span>
+                导出 CSV
+            </button>
+            <span class="text-muted">数据版本 {{ data_version|default:"-" }}</span>
+        </div>
+    </div>
+
+    <div class="card__body">
+        <div class="chart-box"
+             id="{{ chart_id }}"
+             data-chart-option-id="{{ chart_id }}_option"
+             style="--chart-h: {{ chart_height|default:340 }}px"
+             {% if drill_dimension %}data-drill-dimension="{{ drill_dimension }}"{% endif %}
+             {% if drill_api %}data-drill-api="{{ drill_api }}"{% endif %}
+             role="img"
+             aria-label="{{ chart_title|default:'图表' }}（图表为可视化增强，同一批数据在下方表格中可读）"></div>
+
+        {% with oid=chart_id|add:"_option" %}{{ chart_option|json_script:oid }}{% endwith %}
+
+        {% if chart_conclusion %}
+            <hr class="divider">
+            <div class="callout callout--info">
+                <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="info" %}</span>
+                <div><strong>怎么看这张图：</strong>{{ chart_conclusion }}</div>
+            </div>
+        {% endif %}
+    </div>
+</section>

@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+
+{% block filter_bar %}{% endblock %}
+
+{% block page_question %}如果调价、让利、材料涨价、交付延期，毛利会变成多少？把「拍脑袋」换成有假设、有区间、有回测的推演。{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn--ghost btn--small" href="{% url 'dashboard:profit' %}">先看当前品类利润</a>
+    <a class="btn btn--ghost btn--small" href="{% url 'dashboard:metric_dictionary' %}">查看指标口径</a>
+{% endblock %}
+
+{% block content %}
+    {% include "partials/_kpi_cards.html" %}
+
+    <div class="simulator">
+
+        <section class="card">
+            <div class="card__head">
+                <div>
+                    <h3 class="card__title">情景假设</h3>
+                    <div class="card__desc">不调整即为基准</div>
+                </div>
+            </div>
+            <form class="card__body" method="post" action="" data-simulator-form>
+                {% csrf_token %}
+                {% for spec in param_spec %}
+                    <div class="slider-row" data-param-row="{{ spec.key }}"
+                         data-unit="{{ spec.unit }}" data-step="{{ spec.step }}">
+                        <div class="slider-row__top">
+                            <label class="slider-row__label" for="param_{{ spec.key }}">{{ spec.label }}</label>
+                            {% for key, value in params.items %}{% if key == spec.key %}
+                                <span class="slider-row__valwrap">
+                                    <input type="number"
+                                           class="slider-row__num"
+                                           id="param_num_{{ spec.key }}"
+                                           data-slider-input="{{ spec.key }}"
+                                           min="{{ spec.min }}" max="{{ spec.max }}" step="{{ spec.step }}"
+                                           inputmode="decimal"
+                                           value="{{ value }}"
+                                           aria-label="{{ spec.label }}：可直接输入数值">
+                                    <span class="slider-row__unit">{{ spec.unit }}</span>
+                                </span>
+                            {% endif %}{% endfor %}
+                        </div>
+                        <input type="range"
+                               id="param_{{ spec.key }}"
+                               name="{{ spec.key }}"
+                               data-slider-range="{{ spec.key }}"
+                               min="{{ spec.min }}" max="{{ spec.max }}" step="{{ spec.step }}"
+                               value="{% for key, value in params.items %}{% if key == spec.key %}{{ value }}{% endif %}{% endfor %}"
+                               aria-label="{{ spec.label }}滑块">
+                        <div class="slider-row__foot">
+                            <span class="slider-row__hint">{{ spec.help }}</span>
+                            <span class="slider-row__bounds">
+                                {{ spec.min }} 至 {{ spec.max }}，步长 {{ spec.step }}
+                            </span>
+                        </div>
+                    </div>
+                {% endfor %}
+
+                <div class="card__actions">
+                    <button type="submit" class="btn btn--primary">运行推演</button>
+                    <button type="button" class="btn btn--ghost" data-simulator-reset>重置参数</button>
+                </div>
+                <p class="text-muted">
+                    建议先单独动一个参数看清它的杠杆，再组合使用：同时动四个参数会说不清是谁的功劳。
+                </p>
+            </form>
+        </section>
+
+        <div class="grid">
+            {% if result %}
+                <section class="section">
+                    <div class="section__head">
+                        <h2 class="section__title">基准 vs 情景</h2>
+                        <span class="section__note">金额单位：元；比率展示时乘 100（系统内存储 0 至 1）</span>
+                    </div>
+                    <div class="kpi-grid">
+                        <article class="kpi kpi--lead">
+                            <div class="kpi__label"><span>成交额</span></div>
+                            <div class="kpi__value">{{ baseline.revenue|floatformat:0 }}</div>
+                            <div class="kpi__sub">基准</div>
+                        </article>
+                        <article class="kpi">
+                            <div class="kpi__label"><span>情景成交额</span></div>
+                            <div class="kpi__value">{{ scenario.revenue|floatformat:0 }}</div>
+                            <div class="kpi__foot">
+                                <span class="delta {% if delta.revenue >= 0 %}delta--up{% else %}delta--down{% endif %}">
+                                    <span class="delta__arrow" aria-hidden="true">{% if delta.revenue >= 0 %}▲{% else %}▼{% endif %}</span>
+                                    <span>变化 {{ delta.revenue|floatformat:0 }}</span>
+                                </span>
+                            </div>
+                        </article>
+                        <article class="kpi">
+                            <div class="kpi__label"><span>成交额变化率</span></div>
+                            <div class="kpi__value">{{ delta.revenue_pct|floatformat:4 }}</div>
+                            <div class="kpi__sub">0.0123 等于 +1.23%</div>
+                        </article>
+
+                        <article class="kpi">
+                            <div class="kpi__label"><span>基准毛利额</span></div>
+                            <div class="kpi__value">{{ baseline.gross_profit|floatformat:0 }}</div>
+                            <div class="kpi__sub">毛利率 {{ baseline.gross_margin|floatformat:4 }}</div>
+                        </article>
+                        <article class="kpi">
+                            <div class="kpi__label"><span>情景毛利额</span></div>
+                            <div class="kpi__value">{{ scenario.gross_profit|floatformat:0 }}</div>
+                            <div class="kpi__foot">
+                                <span class="delta {% if delta.gross_profit >= 0 %}delta--up{% else %}delta--down{% endif %}">
+                                    <span class="delta__arrow" aria-hidden="true">{% if delta.gross_profit >= 0 %}▲{% else %}▼{% endif %}</span>
+                                    <span>变化 {{ delta.gross_profit|floatformat:0 }}</span>
+                                </span>
+                            </div>
+                        </article>
+                        <article class="kpi">
+                            <div class="kpi__label"><span>毛利率变动（百分点）</span></div>
+                            <div class="kpi__value">
+                                <span class="delta {% if delta.margin_points >= 0 %}delta--up{% else %}delta--down{% endif %}">
+                                    <span class="delta__arrow" aria-hidden="true">{% if delta.margin_points >= 0 %}▲{% else %}▼{% endif %}</span>
+                                    <span>{{ delta.margin_points|floatformat:2 }} pp</span>
+                                </span>
+                            </div>
+                            <div class="kpi__sub">注意：是百分点差，不是相对变化率</div>
+                        </article>
+
+                        <article class="kpi">
+                            <div class="kpi__label"><span>准时交付率</span></div>
+                            <div class="kpi__value">{{ scenario.on_time_rate|floatformat:4 }}</div>
+                            <div class="kpi__sub">基准 {{ baseline.on_time_rate|floatformat:4 }}</div>
+                        </article>
+                        <article class="kpi">
+                            <div class="kpi__label"><span>售后发生率</span></div>
+                            <div class="kpi__value">{{ scenario.after_sales_rate|floatformat:4 }}</div>
+                            <div class="kpi__sub">基准 {{ baseline.after_sales_rate|floatformat:4 }}</div>
+                        </article>
+                        <article class="kpi">
+                            <div class="kpi__label"><span>交付延期总成本</span></div>
+                            <div class="kpi__value">{{ scenario.after_sales_cost|floatformat:0 }}</div>
+                            <div class="kpi__sub">含赔付、加急与售后增量</div>
+                        </article>
+                    </div>
+
+                    <div class="callout callout--info">
+                        <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="info" %}</span>
+                        <div>
+                            该结果由「订单量 × 客单价 - 成本」的可解释公式链推出，
+                            每条台阶与假设都可在下方核对与替换。
+                        </div>
+                    </div>
+                </section>
+            {% else %}
+                <section class="card">
+                    <div class="card__body">
+                        {% include "partials/_empty_state.html" with empty_icon="simulator" empty_title="还没有推演结果" empty_hint="在左侧调整参数后点「运行推演」。不调整任何参数也可以先跑一次，看看当前基准盘是多少。" %}
+                    </div>
+                </section>
+            {% endif %}
+
+            {% include "partials/_chart_loop.html" %}
+
+            {% if waterfall_rows %}
+                <section class="card">
+                    <div class="card__head">
+                        <div>
+                            <h3 class="card__title">毛利瀑布归因（明细）</h3>
+                            <div class="card__desc">台阶之和严格等于毛利变化，残差单独列出、绝不抹平</div>
+                        </div>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <caption class="sr-only">从基准毛利到情景毛利的瀑布归因明细</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">归因项</th>
+                                    <th scope="col" class="is-number">金额（元）</th>
+                                    <th scope="col">方向</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for step in waterfall_rows %}
+                                    <tr>
+                                        <td>{{ step.name }}</td>
+                                        <td class="is-number">{{ step.value|floatformat:2 }}</td>
+                                        <td>
+                                            {% if step.type == 'baseline' %}<span class="badge badge--info">基准</span>
+                                            {% elif step.type == 'total' %}<span class="badge badge--accent">情景</span>
+                                            {% elif step.value >= 0 %}<span class="badge badge--up">增利</span>
+                                            {% else %}<span class="badge badge--down">减利</span>{% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            {% endif %}
+
+            {% if sensitivity_rows %}
+                <section class="card">
+                    <div class="card__head">
+                        <div>
+                            <h3 class="card__title">敏感性分析（单参数扰动，按影响幅度排序）</h3>
+                            <div class="card__desc">单位：元（相对当前情景的毛利变动）</div>
+                        </div>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <caption class="sr-only">各参数的敏感性区间与摆动幅度</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">参数</th>
+                                    <th scope="col" class="is-number">低取值</th>
+                                    <th scope="col" class="is-number">当前取值</th>
+                                    <th scope="col" class="is-number">高取值</th>
+                                    <th scope="col" class="is-number">低值下的毛利</th>
+                                    <th scope="col" class="is-number">高值下的毛利</th>
+                                    <th scope="col" class="is-number">摆动幅度</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in sensitivity_rows %}
+                                    <tr>
+                                        <td>{{ row.param_label }}（{{ row.unit }}）</td>
+                                        <td class="is-number">{{ row.low_value|floatformat:2 }}</td>
+                                        <td class="is-number">{{ row.base_value|floatformat:2 }}</td>
+                                        <td class="is-number">{{ row.high_value|floatformat:2 }}</td>
+                                        <td class="is-number">{{ row.low|floatformat:0 }}</td>
+                                        <td class="is-number">{{ row.high|floatformat:0 }}</td>
+                                        <td class="is-number">{{ row.swing|floatformat:0 }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card__body">
+                        <div class="callout callout--info">
+                            <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="info" %}</span>
+                            <div>
+                                摆动幅度越大，说明该参数对毛利的杠杆越大，优先管理排在最上面的那个。
+                                这是单参数扰动（OAT），不能同时扰动两个参数，否则柱子之间没有可比性。
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            {% endif %}
+
+            {% if assumptions %}
+                <section class="card">
+                    <div class="card__head">
+                        <div>
+                            <h3 class="card__title">假设清单（必须随结果一起看）</h3>
+                            <div class="card__desc">名称 / 取值 / 来源：假设透明的模拟器才敢被用来做决策</div>
+                        </div>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <caption class="sr-only">本次推演所用到的全部假设及其来源</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">假设名称</th>
+                                    <th scope="col">取值</th>
+                                    <th scope="col">来源说明</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in assumptions %}
+                                    <tr>
+                                        <td>{{ item.name }}</td>
+                                        <td class="num">{{ item.value }}</td>
+                                        <td>{{ item.source }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            {% endif %}
+
+            {% if backtest %}
+                <section class="card">
+                    <div class="card__head">
+                        <div>
+                            <h3 class="card__title">历史回测：用 {{ backtest.base_year }} 年参数预测 {{ backtest.target_year }} 年</h3>
+                            <div class="card__desc">模型准不准由回测说话，不由我们自称</div>
+                        </div>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <caption class="sr-only">回测的预测值、实际值与误差率</caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">指标</th>
+                                    <th scope="col" class="is-number">预测值</th>
+                                    <th scope="col" class="is-number">实际值</th>
+                                    <th scope="col" class="is-number">误差率</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>成交额（元）</td>
+                                    <td class="is-number">{{ backtest.revenue.predicted|floatformat:0 }}</td>
+                                    <td class="is-number">{{ backtest.revenue.actual|floatformat:0 }}</td>
+                                    <td class="is-number">{{ backtest.revenue.error_rate|floatformat:4 }}</td>
+                                </tr>
+                                <tr>
+                                    <td>毛利额（元）</td>
+                                    <td class="is-number">{{ backtest.gross_profit.predicted|floatformat:0 }}</td>
+                                    <td class="is-number">{{ backtest.gross_profit.actual|floatformat:0 }}</td>
+                                    <td class="is-number">{{ backtest.gross_profit.error_rate|floatformat:4 }}</td>
+                                </tr>
+                                <tr>
+                                    <td>订单量（单）</td>
+                                    <td class="is-number">{{ backtest.order_count.predicted }}</td>
+                                    <td class="is-number">{{ backtest.order_count.actual }}</td>
+                                    <td class="is-number">{{ backtest.order_count.error_rate|floatformat:4 }}</td>
+                                </tr>
+                                <tr>
+                                    <td>毛利率</td>
+                                    <td class="is-number">{{ backtest.margin.predicted|floatformat:4 }}</td>
+                                    <td class="is-number">{{ backtest.margin.actual|floatformat:4 }}</td>
+                                    <td class="is-number">{{ backtest.margin.error_rate|floatformat:4 }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card__body">
+                        <div class="callout callout--info">
+                            <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="info" %}</span>
+                            <div>
+                                <strong>回测方法：</strong>{{ backtest.method }}<br>
+                                {% for note in backtest.notes %}· {{ note }}<br>{% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 参数面板提交前的轻量提示：全部参数为 0 时先提醒一次，
+    // 避免用户点了「运行推演」却看到一个「没有任何变化」的结果而困惑。
+    // 选择器用 input[type="range"]：滑块不再挂自定义 class（设计系统直接样式化 range）。
+    (function () {
+        var form = document.querySelector('.simulator form');
+        if (!form) return;
+        form.addEventListener('submit', function () {
+            var ranges = form.querySelectorAll('input[type="range"]');
+            var changed = Array.prototype.some.call(ranges, function (input) {
+                return parseFloat(input.value || '0') !== 0;
+            });
+            if (!changed) {
+                console.info('[DSH] 所有参数均为 0，本次推演结果将等于基准盘。');
+            }
+        });
+    })();
+</script>
+{% endblock %}

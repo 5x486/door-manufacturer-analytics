@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block page_question %}谁在创造产值？哪个门店的人效最高？绝对成交额高不等于人效高，人均产出才是可比口径。{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn--ghost btn--small" href="{% url 'dashboard:growth' %}{% if filter_query %}?{{ filter_query }}{% endif %}">看渠道来源</a>
+    <a class="btn btn--ghost btn--small" href="{% url 'dashboard:order_list' %}{% if filter_query %}?{{ filter_query }}{% endif %}">查看订单明细</a>
+{% endblock %}
+
+{% block content %}
+    {% include "partials/_kpi_cards.html" %}
+
+    <div class="callout callout--warn">
+        <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="alert" %}</span>
+        <div>
+            口径提醒：人均产值 = 成交额 ÷ <strong>有成交记录的业务员数</strong>，
+            不含设计、生产与安装人员。把全员算进来会摊薄指标，失去对销售团队的诊断力。
+            对外汇报时建议同时给出「全员人均产值」这一口径。
+        </div>
+    </div>
+
+    {% include "partials/_chart_loop.html" %}
+
+    {% include "partials/_data_table.html" with table=rep_table %}
+    {% include "partials/_data_table.html" with table=store_table %}
+{% endblock %}

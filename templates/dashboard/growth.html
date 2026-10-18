@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block page_question %}客户是从哪儿来的？哪个渠道真正值得加钱？渠道的价值不只看成交额，要看「每元获客成本带来了多少毛利」。{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn--ghost btn--small" href="{% url 'dashboard:customers' %}{% if filter_query %}?{{ filter_query }}{% endif %}">看客户结构</a>
+    <a class="btn btn--ghost btn--small" href="{% url 'dashboard:simulator' %}{% if filter_query %}?{{ filter_query }}{% endif %}">模拟预算转移</a>
+    <a class="btn btn--ghost btn--small" href="{% url 'dashboard:order_list' %}{% if filter_query %}?{{ filter_query }}{% endif %}">查看明细数据</a>
+{% endblock %}
+
+{% block content %}
+    {% include "partials/_kpi_cards.html" %}
+
+    <div class="callout callout--warn">
+        <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="alert" %}</span>
+        <div>
+            口径提醒：<strong>营销费用与获客成本为估算值</strong>，按「新增客户数 × 3 条线索 × 渠道线索单价（constants）」
+            推算，不是财务台账。引用到对外材料前，请先用真实渠道费用替换。
+        </div>
+    </div>
+
+    {% include "partials/_chart_loop.html" %}
+
+    {% include "partials/_data_table.html" with table=channel_table %}
+{% endblock %}

@@ -1,0 +1,492 @@
+/* ==========================================================================
+   杭博门业经营分析系统 · 动效与材质层（Motion & Material Layer）
+   ==========================================================================
+   这一层只做一件事：把「页面刷新」变成「界面在动」，但不改变信息结构。
+   它叠加在 design-system.css 之后加载，新增的规则全部后置覆盖，不改原文件，
+   所以任何一条都可以单独删掉而不影响功能。
+
+   设计目标（对话里确认过的四条）
+   ---------------------------------------------------------------------------
+   1. 外壳重做，页面不动：侧栏 / 顶栏 / 卡片 / 按钮 / 抽屉统一手感，
+      14 个页面自动受益，不重排业务布局。
+   2. 保留左侧栏与不锈钢青绿：#257070 是业务语义（不锈钢门），不做配色革命，
+      只把材质与动效提纯。
+   3. 动效 4 档「明显但克制」：入场编舞、卡片指针光晕、页面转场、
+      图表绘制、数字滚动、抽屉弹簧。不做滚动劫持、不做视差堆叠。
+   4. Chrome / Edge 新版优先：跨页转场用 View Transitions，
+      入场用 IntersectionObserver；不支持的浏览器只是少一点动，功能不缺。
+
+   三条硬约束
+   ---------------------------------------------------------------------------
+   · 尊重 prefers-reduced-motion：关闭后所有元素立刻到位，不做过渡。
+   · 不隐藏内容超过 1.6s：motion.js 没加载成功时，<head> 里的兜底计时器
+     会给 <html> 加上 motion-fallback，把内容全部显示出来。
+   · 只用 transform / opacity / translate 做动画，不动 top/left/width/height，
+     避免每帧触发布局重排。
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. 动效 token
+   --------------------------------------------------------------------------
+   苹果官网的「丝滑」主要来自两条曲线：
+   · 进场用 easeOutQuint 一类的长尾曲线，起步快、收尾慢，看起来有惯性；
+   · 交互反馈用带一点点回弹的 spring 曲线，让按钮像真的被按下去。
+   时长统一成四档，禁止在组件里随手写 0.3s 这种碎值。
+   -------------------------------------------------------------------------- */
+:root {
+  --motion-out: cubic-bezier(.22, 1, .36, 1);        /* 进场：长尾减速 */
+  --motion-in: cubic-bezier(.4, 0, 1, 1);            /* 退场：加速离开 */
+  --motion-in-out: cubic-bezier(.65, 0, .35, 1);     /* 双向：位置互换 */
+  --motion-spring: cubic-bezier(.34, 1.32, .64, 1);  /* 回弹：按下、抽屉 */
+
+  --motion-dur-1: 160ms;   /* 悬停、颜色 */
+  --motion-dur-2: 320ms;   /* 抽屉遮罩、主题切换 */
+  --motion-dur-3: 520ms;   /* 卡片入场 */
+  --motion-dur-4: 760ms;   /* 页面主标题、跨页转场 */
+
+  --motion-stagger: 52ms;  /* 同组元素之间的入场间隔 */
+
+  --motion-lift: -2px;     /* 卡片悬停抬升 */
+}
+
+/* --------------------------------------------------------------------------
+   2. 跨页转场：让「点导航」像原生应用切换页面
+   --------------------------------------------------------------------------
+   @view-transition 是跨文档（页面跳转）的 View Transitions：
+   · 侧栏与顶栏各自命名，转场时保持不动，只有内容区交叉淡入；
+   · 内容区轻微上浮 12px，配合长尾曲线，观感接近 iOS 的页面推入。
+   不支持的浏览器会直接忽略这些规则，跳转行为完全不变。
+   -------------------------------------------------------------------------- */
+@view-transition { navigation: auto; }
+
+.sidebar { view-transition-name: app-sidebar; }
+.topbar { view-transition-name: app-topbar; }
+
+::view-transition-old(root) {
+  animation: vt-content-out 220ms var(--motion-in) both;
+}
+::view-transition-new(root) {
+  animation: vt-content-in var(--motion-dur-3) var(--motion-out) both;
+}
+/* 外壳只做极短的交叉淡化：面包屑文字变了，但位置不变 */
+::view-transition-old(app-sidebar),
+::view-transition-new(app-sidebar),
+::view-transition-old(app-topbar),
+::view-transition-new(app-topbar) {
+  animation-duration: 200ms;
+  animation-timing-function: linear;
+}
+
+@keyframes vt-content-out {
+  to { opacity: 0; translate: 0 -6px; }
+}
+@keyframes vt-content-in {
+  from { opacity: 0; translate: 0 12px; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+/* --------------------------------------------------------------------------
+   3. 入场编排（由 motion.js 打 is-in，CSS 只负责「怎么动」）
+   --------------------------------------------------------------------------
+   为什么要先隐藏：如果元素先可见、再被 JS 藏起来，用户会看到一次闪烁。
+   所以 <head> 里的内联脚本在首帧之前就给 <html> 加上 motion-init，
+   下面这条规则从第一帧起就生效，杜绝闪烁。
+   为什么要兜底：motion.js 若因任何原因没跑起来，1.6 秒后 motion-fallback
+   会把一切恢复成静态可见状态，宁可没有动画，也不能让内容消失。
+   -------------------------------------------------------------------------- */
+html.motion-init :is(
+  .page-head,
+  .filter-bar,
+  .kpi-grid > .kpi,
+  .grid > .card,
+  .grid > .section,
+  .grid > .callout,
+  .grid > .grid > .card,
+  .grid > .grid > .section,
+  .bg-page > .card
+) {
+  opacity: 0;
+  translate: 0 16px;
+}
+
+html.motion-init :is(
+  .page-head,
+  .filter-bar,
+  .kpi-grid > .kpi,
+  .grid > .card,
+  .grid > .section,
+  .grid > .callout,
+  .grid > .grid > .card,
+  .grid > .grid > .section,
+  .bg-page > .card
+).is-in {
+  opacity: 1;
+  translate: 0 0;
+  transition:
+    opacity var(--motion-dur-3) var(--motion-out) var(--reveal-delay, 0ms),
+    translate var(--motion-dur-3) var(--motion-out) var(--reveal-delay, 0ms),
+    /* 下面两条不是入场用的：.is-in 的 transition 会覆盖组件自己的悬停过渡，
+       若不写回 transform / box-shadow，卡片亮起来之后悬停抬升会变成瞬移。 */
+    transform var(--motion-dur-3) var(--motion-spring),
+    box-shadow var(--motion-dur-3) var(--motion-out),
+    border-color var(--motion-dur-2) var(--motion-out);
+}
+
+/* 兜底：JS 没起来时 1.6s 后无条件显示 */
+html.motion-fallback :is(
+  .page-head,
+  .filter-bar,
+  .kpi-grid > .kpi,
+  .grid > .card,
+  .grid > .section,
+  .grid > .callout,
+  .grid > .grid > .card,
+  .grid > .grid > .section,
+  .bg-page > .card
+) {
+  opacity: 1;
+  translate: 0 0;
+  transition: none;
+}
+
+/* 首屏主标题的入场更慢一点：让「标题先落定，卡片再跟上」形成层次 */
+html.motion-init .page-head.is-in .page-head__title {
+  animation: title-in var(--motion-dur-4) var(--motion-out) both;
+  animation-delay: var(--reveal-delay, 0ms);
+}
+@keyframes title-in {
+  from { opacity: 0; translate: 0 10px; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+/* --------------------------------------------------------------------------
+   4. 顶栏：随滚动变成「毛玻璃 + 发丝线 + 软阴影」
+   --------------------------------------------------------------------------
+   苹果官网的导航在滚动后并不是换一个颜色，而是加一层极浅的投影，
+   让导航「浮」在内容之上，用户能感觉到页面在它下面滑过。
+   -------------------------------------------------------------------------- */
+.topbar {
+  transition:
+    background-color var(--motion-dur-2) var(--motion-out),
+    box-shadow var(--motion-dur-2) var(--motion-out),
+    border-color var(--motion-dur-2) var(--motion-out);
+}
+.topbar.is-scrolled {
+  background: rgba(252, 252, 253, .92);
+  border-bottom-color: transparent;
+  box-shadow:
+    0 1px 0 rgba(20, 24, 29, .06),
+    0 12px 28px -20px rgba(20, 24, 29, .5);
+}
+:root[data-theme="dark"] .topbar.is-scrolled {
+  background: rgba(16, 19, 21, .9);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, .05),
+    0 12px 28px -20px rgba(0, 0, 0, .8);
+}
+
+/* 窄屏侧栏抽屉：给遮罩与面板同一套弹簧手感 */
+@media (max-width: 979px) {
+  .sidebar {
+    transition: transform var(--motion-dur-3) var(--motion-out),
+                box-shadow var(--motion-dur-3) var(--motion-out);
+  }
+  .sidebar.is-open { box-shadow: 0 0 0 1px rgba(255, 255, 255, .06), 24px 0 60px -24px rgba(0, 0, 0, .6); }
+}
+
+/* --------------------------------------------------------------------------
+   5. 指针光晕：卡片跟随鼠标的一层柔光
+   --------------------------------------------------------------------------
+   只在「有精确指针且支持悬停」的设备上开启（触屏没有 hover，开了也没意义）。
+   光晕用径向渐变画在 ::after 上，pointer-events: none 保证不挡点击；
+   --mx / --my 由 motion.js 在 pointermove 里写入，用 rAF 节流。
+   -------------------------------------------------------------------------- */
+.kpi,
+.card { position: relative; }
+
+@media (hover: hover) and (pointer: fine) {
+  .kpi::after,
+  .card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--motion-dur-2) var(--motion-out);
+    background: radial-gradient(
+      320px circle at var(--mx, 50%) var(--my, 50%),
+      rgba(37, 112, 112, .085),
+      rgba(37, 112, 112, 0) 62%
+    );
+    z-index: 0;
+  }
+  .kpi:hover::after,
+  .card:hover::after { opacity: 1; }
+
+  /* 卡片内容必须压在光晕之上，否则文字会被染色 */
+  .kpi > *,
+  .card > * { position: relative; z-index: 1; }
+
+  :root[data-theme="dark"] .kpi::after,
+  :root[data-theme="dark"] .card::after {
+    background: radial-gradient(
+      320px circle at var(--mx, 50%) var(--my, 50%),
+      rgba(79, 163, 163, .14),
+      rgba(79, 163, 163, 0) 62%
+    );
+  }
+}
+
+/* --------------------------------------------------------------------------
+   6. 交互反馈：悬停、按下、焦点
+   --------------------------------------------------------------------------
+   按下必须有「东西沉下去」的反馈（scale .97 左右），否则鼠标点击像打在空气上；
+   但按下要快（100ms 内到位），悬停可以慢（200ms+），这是手感的关键区别。
+   -------------------------------------------------------------------------- */
+.btn {
+  transition:
+    background-color var(--motion-dur-1) var(--motion-out),
+    border-color var(--motion-dur-1) var(--motion-out),
+    color var(--motion-dur-1) var(--motion-out),
+    box-shadow var(--motion-dur-2) var(--motion-out),
+    transform var(--motion-dur-2) var(--motion-spring);
+}
+.btn:hover { transform: translateY(-1px); }
+.btn:active {
+  transform: translateY(0) scale(.97);
+  transition-duration: 90ms;
+}
+.btn--primary {
+  box-shadow: 0 1px 2px rgba(20, 24, 29, .12);
+}
+.btn--primary:hover {
+  box-shadow:
+    0 1px 2px rgba(20, 24, 29, .12),
+    0 10px 24px -12px rgba(37, 112, 112, .65);
+}
+.btn:disabled:hover { transform: none; box-shadow: none; }
+
+.icon-btn {
+  transition:
+    background-color var(--motion-dur-1) var(--motion-out),
+    border-color var(--motion-dur-1) var(--motion-out),
+    color var(--motion-dur-1) var(--motion-out),
+    transform var(--motion-dur-2) var(--motion-spring);
+}
+.icon-btn:hover { transform: translateY(-1px); }
+.icon-btn:active { transform: scale(.94); }
+
+/* 侧栏导航：悬停时向右挪 2px，像列表项在「让路」 */
+.sidebar .nav-item {
+  transition:
+    background-color var(--motion-dur-1) var(--motion-out),
+    color var(--motion-dur-1) var(--motion-out),
+    transform var(--motion-dur-2) var(--motion-out);
+}
+.sidebar .nav-item:hover { transform: translateX(2px); }
+.sidebar .nav-item.is-active { transform: none; }
+.sidebar .nav-item.is-active::before {
+  box-shadow: 0 0 12px rgba(79, 163, 163, .55);
+}
+
+/* 卡片悬停：整卡极轻抬升 + 边框提亮，不改变布局占位 */
+.card,
+.kpi {
+  transition:
+    box-shadow var(--motion-dur-3) var(--motion-out),
+    border-color var(--motion-dur-2) var(--motion-out),
+    transform var(--motion-dur-3) var(--motion-spring);
+}
+.kpi:hover {
+  transform: translateY(var(--motion-lift));
+  box-shadow: var(--shadow-2);
+  border-color: var(--border-default);
+}
+.card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-2);
+  border-color: var(--border-default);
+}
+
+/* 表格行：悬停时左侧浮出一小段强调色，代替整行变色（更适合密集数据） */
+.data-table tbody tr { transition: background-color var(--motion-dur-1) var(--motion-out); }
+.data-table tbody tr:hover td:first-child { box-shadow: inset 2px 0 0 var(--accent); }
+
+/* 徽标永远单行显示：卡片头部元素一多，flex 会把「可下钻」压成两行 */
+.badge { white-space: nowrap; flex: none; }
+.card__actions { flex-wrap: wrap; row-gap: var(--sp-2); }
+.card__actions .text-muted { white-space: nowrap; }
+
+/* 筛选标签、分段控件：轻微回弹 */
+.tag {
+  transition:
+    background-color var(--motion-dur-1) var(--motion-out),
+    border-color var(--motion-dur-1) var(--motion-out),
+    transform var(--motion-dur-2) var(--motion-spring);
+}
+.tag:hover { transform: translateY(-1px); }
+
+/* 抽屉：弹簧滑入 + 遮罩轻微模糊，让前景与背景明确分层 */
+.drawer__panel {
+  transform: translateX(32px) scale(.985);
+  transform-origin: right center;
+  transition:
+    transform var(--motion-dur-3) var(--motion-spring),
+    opacity var(--motion-dur-2) var(--motion-out);
+}
+.drawer.is-open .drawer__panel {
+  transform: translateX(0) scale(1);
+}
+.drawer__scrim {
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+/* 主题切换：图标转一小下，让「换了主题」这件事被看见 */
+#themeToggle .nav-item__icon { transition: transform var(--motion-dur-3) var(--motion-spring); }
+#themeToggle:hover .nav-item__icon { transform: rotate(18deg) scale(1.06); }
+
+/* --------------------------------------------------------------------------
+   7. 材质与光学微调
+   --------------------------------------------------------------------------
+   只做三件事，都是「不放大话、只提精度」：
+   · 主标题收紧字距（字号越大，字距越要收，这是排版的物理规律）；
+   · KPI 数字加大一档并收紧字距，让数字成为视觉重心；
+   · 区块标题与正文的行宽做轻微收敛，避免中文长行读到一半丢行。
+   -------------------------------------------------------------------------- */
+.page-head__title {
+  font-size: clamp(26px, 2.4vw, 32px);
+  letter-spacing: -.03em;
+  text-wrap: balance;
+}
+.page-head__question {
+  max-width: 64ch;
+  text-wrap: pretty;
+}
+/* KPI 数字：字号随视口轻微缩放，而不是固定 30px。
+   固定值会在 768 到 1199 这一段（4 列布局、卡片最窄）把「5,981.82 万元」
+   挤成两行，末字单独落在第二行，一眼就能看出是排版事故。
+   clamp 让它在 22px 到 30px 之间连续过渡，任何宽度都不会断行。 */
+.kpi__value {
+  font-size: clamp(22px, 1.55vw + 8px, 30px);
+  letter-spacing: -.03em;
+}
+.section__title { letter-spacing: -.02em; }
+.card__title { letter-spacing: -.015em; }
+
+/* 窄屏回到原来的字号：小屏上 30px 的数字会把卡片撑爆 */
+@media (max-width: 767px) {
+  .page-head__title { font-size: 22px; }
+}
+
+/* --------------------------------------------------------------------------
+   7.1 窄屏横向溢出收敛
+   --------------------------------------------------------------------------
+   栅格子项默认 min-width: auto，等于「不许比内容更窄」。
+   筛选条里的多选框文字是 nowrap 的，于是整条筛选条在手机上被撑到
+   490px 宽（视口 420px），右侧字段直接被裁掉，还会让整页可以横向拖动。
+   两处修正：让栅格子项允许收缩；手机上筛选条改单列，点按区域也更大。
+   -------------------------------------------------------------------------- */
+.grid > * { min-width: 0; }
+.content, .main { min-width: 0; }
+
+/* KPI 网格的最小列宽从 196px 提到 216px。
+   1600 宽、6 列时每张卡只有 ~168px 内容宽，「5,981.82 万元」会断成
+   「5,981.82 万 / 元」，末字单独一行。216px 下 1600 宽自然落成 5 列，
+   数字与单位始终同行；767px 以下仍按设计系统的两列走。 */
+@media (min-width: 768px) {
+  .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(216px, 1fr)); }
+}
+
+@media (max-width: 620px) {
+  .filter-bar__grid { grid-template-columns: minmax(0, 1fr); }
+  .filter-bar__foot { gap: var(--sp-2); }
+  .kpi-grid { gap: var(--sp-3); }
+  /* 口径气泡固定挂在卡片右缘：原来以「?」为中心左右各伸 140px，
+     靠近屏幕右边的卡片会把气泡顶出视口，整页多出一条横向滚动。 */
+  .metric-tip__body {
+    left: auto;
+    right: -10px;
+    transform: none;
+    width: min(260px, calc(100vw - 32px));
+  }
+}
+
+/* 登录页：一层极慢漂移的环境光束，给「还没有数据」的空白一点空气感 */
+.bg-page { position: relative; overflow: hidden; }
+.bg-page::before {
+  content: "";
+  position: fixed;
+  inset: -30% -20%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(44% 38% at 30% 28%, rgba(37, 112, 112, .18), transparent 62%),
+    radial-gradient(38% 32% at 72% 66%, rgba(29, 95, 184, .12), transparent 64%),
+    radial-gradient(30% 26% at 58% 8%, rgba(37, 112, 112, .1), transparent 70%);
+  animation: ambient-drift 26s var(--motion-in-out) infinite alternate;
+}
+/* 登录卡片浮起来：大而散的软阴影是苹果登录/引导页的典型处理，
+   小卡片配小阴影会显得「贴在页面上」，而不是「浮在页面上」。 */
+.bg-page > .card {
+  position: relative;
+  z-index: 1;
+  box-shadow:
+    0 24px 64px -32px rgba(20, 24, 29, .3),
+    0 2px 10px rgba(20, 24, 29, .05);
+}
+@keyframes ambient-drift {
+  from { transform: translate3d(-1.5%, -1%, 0) scale(1); }
+  to { transform: translate3d(1.5%, 1.5%, 0) scale(1.04); }
+}
+
+/* --------------------------------------------------------------------------
+   8. 无障碍：减少动效 / 减少透明度 / 打印
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
+  /* 所有被编舞的元素直接到位，不做位移 */
+  html.motion-init :is(
+    .page-head,
+    .filter-bar,
+    .kpi-grid > .kpi,
+    .grid > .card,
+    .grid > .section,
+    .grid > .callout,
+    .grid > .grid > .card,
+    .grid > .grid > .section,
+    .bg-page > .card
+  ) {
+    opacity: 1;
+    translate: 0 0;
+    transition: none;
+  }
+
+  /* 跨页转场退化为瞬间切换 */
+  ::view-transition-old(root),
+  ::view-transition-new(root),
+  ::view-transition-old(app-sidebar),
+  ::view-transition-new(app-sidebar),
+  ::view-transition-old(app-topbar),
+  ::view-transition-new(app-topbar) { animation: none !important; }
+
+  .bg-page::before { animation: none; }
+  .card:hover, .kpi:hover, .btn:hover, .icon-btn:hover, .tag:hover,
+  .sidebar .nav-item:hover { transform: none; }
+  #themeToggle:hover .nav-item__icon { transform: none; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .topbar.is-scrolled { background: var(--bg-surface); }
+  .drawer__scrim { -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+
+@media print {
+  .bg-page::before { display: none; }
+  html.motion-init :is(.page-head, .filter-bar, .kpi-grid > .kpi, .grid > .card, .grid > .section, .grid > .callout) {
+    opacity: 1 !important;
+    translate: 0 0 !important;
+  }
+}

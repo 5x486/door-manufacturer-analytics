@@ -1,0 +1,10 @@
+
+<div class="empty-state">
+    <span class="empty-state__icon nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name=empty_icon|default:"info" %}</span>
+    <div class="empty-state__title">{{ empty_title|default:"暂无数据" }}</div>
+    {% if empty_hint %}
+        <div class="empty-state__desc">{{ empty_hint }}</div>
+    {% else %}
+        <div class="empty-state__desc">请放宽筛选条件，或换一个期间后再看。</div>
+    {% endif %}
+</div>

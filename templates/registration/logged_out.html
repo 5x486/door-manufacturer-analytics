@@ -1,0 +1,37 @@
+{% load static %}<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>已退出 · {{ project_name|default:"杭博门业经营分析系统" }}</title>
+
+    <script>(function(){try{var t=localStorage.getItem('dsh-theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}})();</script>
+
+    {% include "partials/_motion_boot.html" %}
+
+    <link rel="stylesheet" href="{% static 'css/design-system.css' %}?v={{ static_version }}">
+    <link rel="stylesheet" href="{% static 'css/motion-layer.css' %}?v={{ static_version }}">
+    <style>
+        /* 退出页与登录页一样是独立页面：居中只需一条页面级规则，
+           不修改 design-system.css，也不新增组件类名。 */
+        .bg-page { min-height: 100vh; display: grid; place-items: center; padding: var(--sp-6) var(--sp-4); }
+        .bg-page > .card { width: 100%; max-width: 420px; }
+    </style>
+</head>
+<body>
+<main class="bg-page">
+    <div class="card">
+        <div class="card__body">
+            <h1 class="page-head__title">已安全退出</h1>
+            <p class="page-head__question">
+                你的登录状态已清除。系统内所有数据均为模拟数据，重新登录即可继续查看。
+            </p>
+            <div class="card__actions">
+                <a class="btn btn--primary" href="{% url 'login' %}">返回登录</a>
+            </div>
+        </div>
+    </div>
+</main>
+<script src="{% static 'js/motion.js' %}?v={{ static_version }}"></script>
+</body>
+</html>

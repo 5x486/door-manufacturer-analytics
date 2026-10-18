@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block page_question %}这个客户买了什么、付了多少钱、有没有风险？{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn--ghost btn--small" href="{% url 'dashboard:customers' %}">返回客户价值</a>
+    <a class="btn btn--ghost btn--small" href="{% url 'dashboard:order_list' %}?customer={{ customer_code }}">在明细中检索</a>
+    {% if profile.phone_masked %}
+        <span class="tag">联系电话 {{ profile.phone_masked }}（已按权限脱敏）</span>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+    {% if not found %}
+        {% include "partials/_empty_state.html" with empty_icon="customers" empty_title="未找到该客户" empty_hint="客户编码可能书写有误，或该客户尚未建档。建议回到客户价值页，从预警名单直接点进。" %}
+    {% else %}
+        <div class="grid grid--1-2">
+
+            <aside class="card">
+                <div class="card__head">
+                    <div>
+                        <h3 class="card__title">{{ profile.customer_name|default:"未命名客户" }}</h3>
+                        <div class="card__desc">{{ profile.customer_code }}</div>
+                    </div>
+                </div>
+                <div class="card__body">
+                    <div class="card__actions">
+                        <span class="badge badge--accent">{{ profile.customer_type|default:"未分类" }}</span>
+                        <span class="badge badge--info">{{ profile.segment|default:"未分群" }}</span>
+                        {% if profile.member_level %}<span class="badge badge--info">{{ profile.member_level }}</span>{% endif %}
+                        {% if profile.channel %}<span class="badge badge--info">{{ profile.channel }}</span>{% endif %}
+                        {% if profile.is_lead %}<span class="badge badge--warn">线索客户</span>{% endif %}
+                    </div>
+
+                    <hr class="divider">
+
+                    <dl class="definition-list">
+                        <dt>联系电话</dt><dd>{{ profile.phone_masked|default:"-" }}</dd>
+                        <dt>性别 / 年龄</dt><dd>{{ profile.gender|default:"-" }} / {{ profile.age|default:"-" }}</dd>
+                        <dt>所在地区</dt><dd>{{ profile.province|default:"-" }}{{ profile.city|default:"" }}</dd>
+                        <dt>详细地址</dt><dd>{{ profile.address|default:"-" }}</dd>
+                        <dt>注册日期</dt><dd>{{ profile.register_date|default:"-" }}</dd>
+                        <dt>首次下单</dt><dd>{{ summary.first_order_date|default:"-" }}</dd>
+                        <dt>最近下单</dt><dd>{{ summary.last_order_date|default:"-" }}</dd>
+                        <dt>RFM 总分</dt><dd>{{ profile.rfm_score|default:"-" }}</dd>
+                        <dt>聚类簇</dt><dd>{{ profile.kmeans_cluster|default:"-" }}</dd>
+                    </dl>
+
+                    {% if risk_flags %}
+                        <hr class="divider">
+                        <div class="grid">
+                            {% for flag in risk_flags %}
+                                <div class="callout {% if flag.level == '高' %}callout--error{% elif flag.level == '中' %}callout--warn{% else %}callout--info{% endif %}">
+                                    <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="alert" %}</span>
+                                    <div>
+                                        <strong>{{ flag.flag }}</strong>（{{ flag.level }}）<br>
+                                        <span class="text-muted">{{ flag.detail }}</span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </aside>
+
+            <div class="grid">
+                {% include "partials/_kpi_cards.html" %}
+
+                {% include "partials/_chart_loop.html" %}
+
+                <section class="section">
+                    <div class="section__head">
+                        <h2 class="section__title">客户档案明细</h2>
+                        <div class="card__actions" role="tablist" aria-label="客户档案明细标签页">
+                            <button type="button" class="btn btn--ghost btn--small is-active" data-tab-target="tabOrders" data-tab-group="customerTabs" role="tab" aria-selected="true">订单（{{ orders|length }}）</button>
+                            <button type="button" class="btn btn--ghost btn--small" data-tab-target="tabPayments" data-tab-group="customerTabs" role="tab" aria-selected="false">付款（{{ payments|length }}）</button>
+                            <button type="button" class="btn btn--ghost btn--small" data-tab-target="tabAfterSales" data-tab-group="customerTabs" role="tab" aria-selected="false">售后（{{ after_sales|length }}）</button>
+                            <button type="button" class="btn btn--ghost btn--small" data-tab-target="tabTimeline" data-tab-group="customerTabs" role="tab" aria-selected="false">时间线</button>
+                        </div>
+                    </div>
+
+                    <div data-tab-panels="customerTabs">
+                        <div id="tabOrders" data-tab-panel="tabOrders" data-tab-group="customerTabs">
+                            <div class="grid">
+                                {% include "partials/_data_table.html" with table=order_table %}
+                                {% include "partials/_data_table.html" with table=item_table %}
+                            </div>
+                        </div>
+
+                        <div id="tabPayments" data-tab-panel="tabPayments" data-tab-group="customerTabs" hidden>
+                            <div class="grid">
+                                {% include "partials/_data_table.html" with table=payment_table %}
+                            </div>
+                        </div>
+
+                        <div id="tabAfterSales" data-tab-panel="tabAfterSales" data-tab-group="customerTabs" hidden>
+                            <div class="grid">
+                                {% include "partials/_data_table.html" with table=after_table %}
+                            </div>
+                        </div>
+
+                        <div id="tabTimeline" data-tab-panel="tabTimeline" data-tab-group="customerTabs" hidden>
+                            {% if timeline %}
+                                <div class="conclusion-list">
+                                    {% for event in timeline %}
+                                        <article class="conclusion">
+                                            <div>
+                                                <h3 class="conclusion__title">{{ event.date|default:"日期缺失" }} · {{ event.title }}</h3>
+                                                <div class="conclusion__body">
+                                                    {{ event.detail }}
+                                                    {% if event.amount %}
+                                                        <span class="num">（{{ event.amount }} 元）</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </article>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                {% include "partials/_empty_state.html" with empty_icon="orders" empty_title="暂无时间线事件" empty_hint="该客户还没有订单、付款或售后记录。可以先在上方标签页核对订单与付款是否为空。" %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

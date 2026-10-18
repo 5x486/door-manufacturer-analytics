@@ -1,0 +1,62 @@
+
+{% if table %}
+<section class="card">
+    <div class="card__head">
+        <div>
+            <h3 class="card__title">{{ table.table_title }}</h3>
+            {% if table.table_description %}
+                <div class="card__desc">{{ table.table_description }}</div>
+            {% endif %}
+        </div>
+        {% if table.sortable %}
+            <span class="card__desc">点击表头可排序（排序参数写入 URL，可分享）</span>
+        {% endif %}
+    </div>
+
+    {% if table.rows %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <caption class="sr-only">{{ table.table_caption }}</caption>
+                <thead>
+                    <tr>
+                        {% for column in table.columns %}
+                            <th scope="col"{% if table.sortable and column.sort_key %} class="is-sortable{% if column.numeric %} is-number{% endif %}"{% elif column.numeric %} class="is-number"{% endif %}>
+                                {% if table.sortable and column.sort_key %}
+                                    {% if ordering == column.sort_key %}
+                                        <a href="?{% if filter_query %}{{ filter_query }}&{% endif %}ordering=-{{ column.sort_key }}">
+                                            <span>{{ column.label }}</span><span aria-hidden="true">▲</span><span class="sr-only">当前按此列升序，点击改为降序</span>
+                                        </a>
+                                    {% elif ordering == column.desc_key %}
+                                        <a href="?{% if filter_query %}{{ filter_query }}&{% endif %}ordering={{ column.sort_key }}">
+                                            <span>{{ column.label }}</span><span aria-hidden="true">▼</span><span class="sr-only">当前按此列降序，点击改为升序</span>
+                                        </a>
+                                    {% else %}
+                                        <a href="?{% if filter_query %}{{ filter_query }}&{% endif %}ordering=-{{ column.sort_key }}">
+                                            <span>{{ column.label }}</span><span aria-hidden="true">↕</span><span class="sr-only">点击按此列排序</span>
+                                        </a>
+                                    {% endif %}
+                                {% else %}
+                                    {{ column.label }}
+                                {% endif %}
+                            </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in table.zipped_rows %}
+                        <tr>
+                            {% for column, cell in row.pairs %}
+                                <td{% if column.numeric %} class="is-number"{% endif %}>{{ cell }}</td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="card__body">
+            {% include "partials/_empty_state.html" with empty_icon="orders" empty_title="没有符合条件的记录" empty_hint="可以放宽筛选条件，或换一个期间后再看；也可以到「明细数据」页查看全量清单。" %}
+        </div>
+    {% endif %}
+</section>
+{% endif %}

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block filter_bar %}{% endblock %}
+
+{% block page_question %}模型到底靠不靠谱？这个客户为什么被打了高分？模型给出分值，业务必须能看懂理由才敢用。{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn--ghost btn--small" href="{% url 'dashboard:retention' %}">对照规则法预警名单</a>
+    <a class="btn btn--ghost btn--small" href="{% url 'dashboard:data_quality' %}">查看数据质量</a>
+{% endblock %}
+
+{% block content %}
+    {% include "partials/_kpi_cards.html" %}
+
+    {% include "partials/_chart_loop.html" %}
+
+    {% include "partials/_data_table.html" with table=feature_table %}
+    {% include "partials/_data_table.html" with table=version_table %}
+
+    <section class="card">
+        <div class="card__head">
+            <div>
+                <h3 class="card__title">单订单 / 单客户评分查询</h3>
+                <div class="card__desc">输入评分主体编码（客户编码或订单号），查看分值、Top 因子与人话解释</div>
+            </div>
+        </div>
+        <div class="card__body">
+            <form method="post" action="">
+                {% csrf_token %}
+                <div class="filter-bar__grid">
+                    <div class="field">
+                        <label class="field__label" for="subjectKey">评分主体编码</label>
+                        <input type="text" id="subjectKey" name="subject_key"
+                               value="{{ query_key|default:'' }}" placeholder="例如 HB0001 或 SO20250001">
+                    </div>
+                    <div class="field">
+                        <span class="field__label">查询</span>
+                        <button type="submit" class="btn btn--primary">查询评分</button>
+                    </div>
+                </div>
+                <span class="field__hint">评分主体编码可在下方「最近评分结果」表中查看。</span>
+            </form>
+
+            {% if query_result %}
+                <hr class="divider">
+                <div class="conclusion-list">
+                    <article class="conclusion{% if query_result.score >= 0.6 %} conclusion--down{% elif query_result.score >= 0.3 %} conclusion--warn{% endif %}">
+                        <div>
+                            <h3 class="conclusion__title">
+                                <span>{{ query_result.subject_key }}</span>
+                                <span class="badge badge--info">{{ query_result.task|default:"模型" }}</span>
+                            </h3>
+                            <div class="conclusion__body">
+                                <strong>模型评分：{{ query_result.score|floatformat:4 }}</strong>
+                                （{{ query_result.predicted_label|default:"未给出标签" }}）<br>
+                                预测值：{{ query_result.predicted_value|floatformat:2 }}<br>
+                                <strong>人话解释：</strong>{{ query_result.explanation|default:"模型未提供解释文本" }}<br>
+                                主要因子：
+                                {% for factor in query_result.top_factors %}
+                                    {{ factor.feature|default:factor }}{% if not forloop.last %}、{% endif %}
+                                {% empty %}
+                                    未记录
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            {% elif query_key %}
+                {% include "partials/_empty_state.html" with empty_icon="model" empty_title="没有找到该主体的评分记录" empty_hint="请确认客户编码或订单号是否正确，或该主体尚未被模型评分。可以先在下方「最近评分结果」表里找一个已评分的主体。" %}
+            {% endif %}
+        </div>
+    </section>
+
+    {% include "partials/_data_table.html" with table=scored_table %}
+
+    <section class="section">
+        <div class="section__head">
+            <h2 class="section__title">模型使用原则</h2>
+            <span class="section__note">这四条是模型能不能进业务流程的前置条件</span>
+        </div>
+        <dl class="definition-list">
+            <dt>用于排序，不用于判决</dt>
+            <dd>模型给出优先级建议，最终是否触达由业务规则与客户经理判断。</dd>
+            <dt>可解释性优先</dt>
+            <dd>每条评分都必须带 Top 因子与人话解释；没有解释的评分不允许进入业务流程。</dd>
+            <dt>与规则法并存</dt>
+            <dd>流失预警以规则法（可解释、可复现）为准，模型用于更精细的排序，两者冲突时以规则为准。</dd>
+            <dt>上线必须有基线对比</dt>
+            <dd>新版本相对基线模型的 AUC / MAE 未改善则不上线，并保留历史版本以便回滚。</dd>
+        </dl>
+    </section>
+{% endblock %}

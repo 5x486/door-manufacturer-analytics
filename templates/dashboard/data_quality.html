@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block filter_bar %}{% endblock %}
+
+{% block page_question %}这批数据能信吗？哪些字段有问题？先确认数据可信，再谈分析结论。{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn--ghost btn--small" href="{% url 'dashboard:overview' %}">回到经营总览</a>
+    <a class="btn btn--ghost btn--small" href="{% url 'dashboard:metric_dictionary' %}">查看指标口径</a>
+{% endblock %}
+
+{% block content %}
+    {% if not summary.has_run %}
+        <section class="card">
+            <div class="card__body">
+                {% include "partials/_empty_state.html" with empty_icon="dq" empty_title="尚未执行数据质量校验" empty_hint="没有校验记录时不要显示「全部通过」：全是 0 会被误读成完美。建议先在数据质量入口执行一次全量校验。" %}
+            </div>
+        </section>
+    {% else %}
+        {% include "partials/_kpi_cards.html" %}
+
+        <p class="text-muted">
+            最近一次校验：<strong>#{{ summary.run_id }}</strong> ·
+            触发方式 {{ summary.trigger|default:"-" }} ·
+            数据基准日 {{ summary.data_as_of|default:"-" }} ·
+            执行时间 {{ summary.created_at|default:"-" }} ·
+            耗时 {{ summary.duration_ms|default:0 }} ms。
+            判定策略：只有 <code>error</code> 级失败才算「不健康」，warning 级差异在门厂数据里属常态。
+        </p>
+
+        {% include "partials/_chart_loop.html" %}
+
+        {% include "partials/_data_table.html" with table=failed_table %}
+        {% include "partials/_data_table.html" with table=rule_table %}
+
+        <section class="section">
+            <div class="section__head">
+                <h2 class="section__title">规则状态图例与处理原则</h2>
+                <span class="section__note">三种状态对应三种动作：通过放行、警告留痕、失败阻断</span>
+            </div>
+            <div class="grid">
+                <div class="callout">
+                    <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="check" %}</span>
+                    <div>
+                        <span class="badge badge--up">通过</span>
+                        问题行数未超过该规则的阈值，数据可以直接进入指标计算。
+                    </div>
+                </div>
+                <div class="callout callout--warn">
+                    <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="alert" %}</span>
+                    <div>
+                        <span class="badge badge--warn">警告</span>
+                        warning 级差异（例如手工抹零、个别亏损接单），需要留痕但不必阻断业务。
+                    </div>
+                </div>
+                <div class="callout callout--error">
+                    <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="alert" %}</span>
+                    <div>
+                        <span class="badge badge--down">失败</span>
+                        error 级差异，会直接影响指标可信度，必须人工核查后才能继续用这批数据。
+                    </div>
+                </div>
+            </div>
+            <p class="text-muted">
+                单条规则自身执行异常时按 warning 处理并保留异常信息：
+                直接判 fail 会淹没真实数据问题，判 pass 又会掩盖校验引擎本身的 bug。
+            </p>
+        </section>
+    {% endif %}
+{% endblock %}

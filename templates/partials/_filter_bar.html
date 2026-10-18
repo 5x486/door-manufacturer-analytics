@@ -1,0 +1,172 @@
+
+<form class="filter-bar" id="filterForm" method="get" action="" data-filter-form>
+    <div class="filter-bar__grid">
+
+        <div class="field">
+            <label class="field__label" for="filterPeriod">期间</label>
+            <select id="filterPeriod" name="period">
+                <option value="">全部期间</option>
+                {% for option in filter_bar.options.periods %}
+                    <option value="{{ option.value }}"{% if filters.period == option.value %} selected{% endif %}>{{ option.label }}</option>
+                {% endfor %}
+            </select>
+            <span class="field__hint">单选用途：按年看汇总</span>
+        </div>
+
+        <div class="field">
+            <label class="field__label" for="filterYears">年份（可多选）</label>
+            <select id="filterYears" multiple data-filter-field="years" data-multi="1">
+                {% for option in filter_bar.years_options %}
+                    <option value="{{ option.value }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>
+                {% endfor %}
+            </select>
+            <input type="hidden" name="years" data-filter-field="years" value="{{ filters.years|join:',' }}">
+            <span class="field__hint">点一下即选中，再点取消</span>
+        </div>
+
+        <div class="field">
+            <label class="field__label" for="filterChannels">渠道（可多选）</label>
+            <select id="filterChannels" multiple data-filter-field="channels" data-multi="1">
+                {% for option in filter_bar.channel_options %}
+                    <option value="{{ option.value }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>
+                {% endfor %}
+            </select>
+            <input type="hidden" name="channels" data-filter-field="channels" value="{{ filters.channels|join:',' }}">
+        </div>
+
+        <div class="field">
+            <label class="field__label" for="filterCategories">品类（可多选）</label>
+            <select id="filterCategories" multiple data-filter-field="categories" data-multi="1">
+                {% for option in filter_bar.category_options %}
+                    <option value="{{ option.value }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>
+                {% endfor %}
+            </select>
+            <input type="hidden" name="categories" data-filter-field="categories" value="{{ filters.categories|join:',' }}">
+        </div>
+
+        <div class="field">
+            <label class="field__label" for="filterCustomerTypes">客户类型（可多选）</label>
+            <select id="filterCustomerTypes" multiple data-filter-field="customer_types" data-multi="1">
+                {% for option in filter_bar.customer_type_options %}
+                    <option value="{{ option.value }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>
+                {% endfor %}
+            </select>
+            <input type="hidden" name="customer_types" data-filter-field="customer_types" value="{{ filters.customer_types|join:',' }}">
+        </div>
+
+        <div class="field">
+            <label class="field__label" for="filterOrderTypes">订单类型（可多选）</label>
+            <select id="filterOrderTypes" multiple data-filter-field="order_types" data-multi="1">
+                {% for option in filter_bar.order_type_options %}
+                    <option value="{{ option.value }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>
+                {% endfor %}
+            </select>
+            <input type="hidden" name="order_types" data-filter-field="order_types" value="{{ filters.order_types|join:',' }}">
+        </div>
+
+        <div class="field">
+            <label class="field__label" for="filterStores">门店（可多选）</label>
+            <select id="filterStores" multiple data-filter-field="stores" data-multi="1">
+                {% for option in filter_bar.store_options %}
+                    <option value="{{ option.value }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>
+                {% empty %}
+                    <option value="" disabled>门店主数据暂不可用（不影响其它筛选）</option>
+                {% endfor %}
+            </select>
+            <input type="hidden" name="stores" data-filter-field="stores" value="{{ filters.stores|join:',' }}">
+        </div>
+
+        <div class="field">
+            <label class="field__label" for="filterSegments">客群（可多选）</label>
+            <select id="filterSegments" multiple data-filter-field="segments" data-multi="1">
+                {% for option in filter_bar.segment_options %}
+                    <option value="{{ option.value }}"{% if option.selected %} selected{% endif %}>{{ option.label }}</option>
+                {% endfor %}
+            </select>
+            <input type="hidden" name="segments" data-filter-field="segments" value="{{ filters.segments|join:',' }}">
+        </div>
+
+        <div class="field">
+            <label class="field__label" for="filterDateFrom">起始日期</label>
+            <input type="date" id="filterDateFrom" name="date_from" value="{{ filters.date_from|date:'Y-m-d' }}">
+        </div>
+        <div class="field">
+            <label class="field__label" for="filterDateTo">结束日期</label>
+            <input type="date" id="filterDateTo" name="date_to" value="{{ filters.date_to|date:'Y-m-d' }}">
+        </div>
+    </div>
+
+    <div class="filter-bar__foot">
+
+        <div class="filter-bar__tags">
+            {% if filters.period %}
+                <span class="tag">期间 {{ filters.period }}
+                    <button type="button" class="btn btn--quiet btn--small" data-filter-remove="period" aria-label="移除期间条件">
+                        <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="close" %}</span>
+                    </button>
+                </span>
+            {% endif %}
+            {% for value in filters.years %}
+                <span class="tag">年份 {{ value }}
+                    <button type="button" class="btn btn--quiet btn--small" data-filter-remove="years" data-filter-value="{{ value }}" aria-label="移除年份 {{ value }}">
+                        <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="close" %}</span>
+                    </button>
+                </span>
+            {% endfor %}
+            {% for value in filters.channels %}
+                <span class="tag">渠道 {{ value }}
+                    <button type="button" class="btn btn--quiet btn--small" data-filter-remove="channels" data-filter-value="{{ value }}" aria-label="移除渠道 {{ value }}">
+                        <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="close" %}</span>
+                    </button>
+                </span>
+            {% endfor %}
+            {% for value in filters.categories %}
+                <span class="tag">品类 {{ value }}
+                    <button type="button" class="btn btn--quiet btn--small" data-filter-remove="categories" data-filter-value="{{ value }}" aria-label="移除品类 {{ value }}">
+                        <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="close" %}</span>
+                    </button>
+                </span>
+            {% endfor %}
+            {% for value in filters.customer_types %}
+                <span class="tag">客户类型 {{ value }}
+                    <button type="button" class="btn btn--quiet btn--small" data-filter-remove="customer_types" data-filter-value="{{ value }}" aria-label="移除客户类型 {{ value }}">
+                        <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="close" %}</span>
+                    </button>
+                </span>
+            {% endfor %}
+            {% for value in filters.order_types %}
+                <span class="tag">订单类型 {{ value }}
+                    <button type="button" class="btn btn--quiet btn--small" data-filter-remove="order_types" data-filter-value="{{ value }}" aria-label="移除订单类型 {{ value }}">
+                        <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="close" %}</span>
+                    </button>
+                </span>
+            {% endfor %}
+            {% for value in filters.stores %}
+                <span class="tag">门店 {{ value }}
+                    <button type="button" class="btn btn--quiet btn--small" data-filter-remove="stores" data-filter-value="{{ value }}" aria-label="移除门店 {{ value }}">
+                        <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="close" %}</span>
+                    </button>
+                </span>
+            {% endfor %}
+            {% for value in filters.segments %}
+                <span class="tag">客群 {{ value }}
+                    <button type="button" class="btn btn--quiet btn--small" data-filter-remove="segments" data-filter-value="{{ value }}" aria-label="移除客群 {{ value }}">
+                        <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="close" %}</span>
+                    </button>
+                </span>
+            {% endfor %}
+            {% if filters.date_from or filters.date_to %}
+                <span class="tag">区间 {{ filters.date_from|date:'Y-m-d'|default:"不限" }} 至 {{ filters.date_to|date:'Y-m-d'|default:"不限" }}</span>
+            {% endif %}
+            {% if filters.is_empty %}
+                <span class="tag tag--muted">
+                    未设置任何条件，当前为全量口径。全量不等于「本期」，跨年比较前请先选定期间。
+                </span>
+            {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn--primary btn--small">查询</button>
+
+        <a class="btn btn--ghost btn--small" href="{{ request.path }}">清空筛选</a>
+    </div>
+</form>

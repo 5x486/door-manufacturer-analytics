@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block page_question %}这一笔到底是谁下的单？能不能追到原始记录？看板上的每个数字都应该能在这一页被验证。{% endblock %}
+
+{% block page_actions %}
+    <a class="btn btn--ghost btn--small" href="{% url 'dashboard:overview' %}{% if filter_query %}?{{ filter_query }}{% endif %}">回到经营总览</a>
+    <span class="tag">当前排序：{{ ordering }}</span>
+{% endblock %}
+
+{% block content %}
+    {% include "partials/_kpi_cards.html" %}
+
+    {% include "partials/_data_table.html" with table=order_table %}
+
+    {% if page_obj %}
+        <nav class="pagination" aria-label="分页导航">
+            <span>
+                共 {{ page_obj.paginator.count }} 条 · 第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 页 ·
+                每页 {{ page_size }} 条
+            </span>
+
+            <span class="pagination__pages">
+                {% if page_obj.has_previous %}
+                    <a class="pagination__link" href="?{% if filter_query %}{{ filter_query }}&{% endif %}page=1&ordering={{ ordering }}&page_size={{ page_size }}" aria-label="第一页">首页</a>
+                    <a class="pagination__link" href="?{% if filter_query %}{{ filter_query }}&{% endif %}page={{ page_obj.previous_page_number }}&ordering={{ ordering }}&page_size={{ page_size }}" aria-label="上一页">上一页</a>
+                {% endif %}
+
+                <span class="pagination__link is-current" aria-current="page">{{ page_obj.number }}</span>
+
+                {% if page_obj.has_next %}
+                    <a class="pagination__link" href="?{% if filter_query %}{{ filter_query }}&{% endif %}page={{ page_obj.next_page_number }}&ordering={{ ordering }}&page_size={{ page_size }}" aria-label="下一页">下一页</a>
+                    <a class="pagination__link" href="?{% if filter_query %}{{ filter_query }}&{% endif %}page={{ page_obj.paginator.num_pages }}&ordering={{ ordering }}&page_size={{ page_size }}" aria-label="最后一页">末页</a>
+                {% endif %}
+            </span>
+
+            <span class="text-muted">
+                每页条数：
+                <a href="?{% if filter_query %}{{ filter_query }}&{% endif %}page_size=25&ordering={{ ordering }}">25</a> ·
+                <a href="?{% if filter_query %}{{ filter_query }}&{% endif %}page_size=50&ordering={{ ordering }}">50</a> ·
+                <a href="?{% if filter_query %}{{ filter_query }}&{% endif %}page_size=100&ordering={{ ordering }}">100</a> ·
+                <a href="?{% if filter_query %}{{ filter_query }}&{% endif %}page_size=200&ordering={{ ordering }}">200</a>
+            </span>
+        </nav>
+    {% endif %}
+
+    <section class="section">
+        <div class="section__head">
+            <h2 class="section__title">导出与对账说明</h2>
+            <span class="section__note">导出的 CSV 与本页使用完全相同的筛选条件</span>
+        </div>
+        <div class="callout callout--info">
+            <span class="nav-item__icon" aria-hidden="true">{% include "partials/_icon.html" with name="info" %}</span>
+            <div>
+                本页展示的是<strong>有效订单</strong>（已排除「已取消」）。筛选条件会规范化为缓存 key 与查询串，
+                可以在地址栏直接复制分享给同事，对方看到的数字与你完全一致。
+            </div>
+        </div>
+        <p class="text-muted">
+            对账建议：把页面上的「命中订单数」与「当前页金额」和用 Excel 独立汇总的结果比对。
+            对不上时通常是口径差异（是否含取消订单、是否含运费、品类按主品类还是明细品类），
+            而不是系统算错。这正是「指标字典」页存在的意义。
+        </p>
+    </section>
+{% endblock %}

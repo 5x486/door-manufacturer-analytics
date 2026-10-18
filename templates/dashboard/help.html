@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}使用说明 · 每个页面怎么用{% endblock %}
+{% block page_eyebrow %}上手引导{% endblock %}
+{% block page_title %}使用说明：每个栏目怎么用{% endblock %}
+{% block page_question %}第一次打开这个系统，按这份说明从上到下走一遍，十分钟就能看懂全部功能。{% endblock %}
+
+{% block filter_bar %}{% endblock %}
+
+{% block content %}
+
+<section class="section">
+    <div class="section__head">
+        <h2 class="section__title">三分钟上手</h2>
+        <span class="section__note">先做完这四步，再看具体栏目</span>
+    </div>
+    <div class="card">
+        <div class="card__body">
+            <div class="help-grid">
+                <div class="help-step">
+                    <span class="help-step__num">1</span>
+                    <div>
+                        <div class="help-step__title">先选筛选条件，再读数字</div>
+                        <div class="help-step__desc">
+                            页面上方的筛选条决定你看到的范围。年份、渠道、品类等都是<b>可多选</b>的，
+                            点一下输入框会展开选项列表，<b>直接点击即选中</b>，再点一次取消，不需要按住 Ctrl。
+                            选完会自动刷新数据。
+                        </div>
+                    </div>
+                </div>
+                <div class="help-step">
+                    <span class="help-step__num">2</span>
+                    <div>
+                        <div class="help-step__title">读 KPI 卡片时，把鼠标放到问号上</div>
+                        <div class="help-step__desc">
+                            每个关键数字旁边都有一个小问号。悬停它就能看到这个数字的<b>业务定义、计算公式、
+                            分子分母、以及最容易误读的地方</b>。口径不确定时先看这里，不要靠猜。
+                        </div>
+                    </div>
+                </div>
+                <div class="help-step">
+                    <span class="help-step__num">3</span>
+                    <div>
+                        <div class="help-step__title">任何图上的柱子、扇区都能点</div>
+                        <div class="help-step__desc">
+                            点一下会从右侧滑出<b>明细抽屉</b>，显示构成这个数字的订单清单。
+                            这是从「看到一个异常」到「看到是谁」最快的一步，抽屉可以用 Esc 关闭。
+                        </div>
+                    </div>
+                </div>
+                <div class="help-step">
+                    <span class="help-step__num">4</span>
+                    <div>
+                        <div class="help-step__title">看完数字，去页面底部看结论</div>
+                        <div class="help-step__desc">
+                            每个页面的结论区不只写「发生了什么」，还写了「<b>所以建议做什么</b>」。
+                            如果只能看一部分，先看结论，再回头看图。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="section__head">
+        <h2 class="section__title">侧边栏每个栏目是干什么的</h2>
+        <span class="section__note">按经营决策的顺序排列</span>
+    </div>
+    <div class="table-wrap">
+        <table class="data-table">
+            <caption class="sr-only">侧边栏各栏目的用途、回答的问题与使用建议</caption>
+            <thead>
+                <tr>
+                    <th>分组</th>
+                    <th>栏目</th>
+                    <th>回答什么问题</th>
+                    <th>建议怎么看</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td rowspan="3" class="is-muted">经营</td>
+                    <td><b>经营总览</b></td>
+                    <td>今年做得怎么样：成交额、毛利、目标达成、回款</td>
+                    <td>每天第一屏。先看目标达成率，再看同比；异常时点进对应专题页查原因</td>
+                </tr>
+                <tr>
+                    <td><b>增长与渠道</b></td>
+                    <td>单子从哪来：抖音、转介、展会各带来多少、成本多高</td>
+                    <td>要决定广告或人力投哪时看这页。重点比较「渠道 ROI」而不是只看成交量</td>
+                </tr>
+                <tr>
+                    <td><b>品类与利润</b></td>
+                    <td>哪类门真正赚钱：收入结构、成本结构、毛利率</td>
+                    <td>看「营收占比 vs 毛利占比」四象限：卖得多但不赚钱的品类会落在右下角</td>
+                </tr>
+
+                <tr>
+                    <td rowspan="2" class="is-muted">客户</td>
+                    <td><b>客户价值</b></td>
+                    <td>谁是最重要的客户：RFM 分群、贡献集中度</td>
+                    <td>看 Top 客户贡献占比。高价值客户名单可以直接导出用于维护。点客户名进客户 360</td>
+                </tr>
+                <tr>
+                    <td><b>留存与预警</b></td>
+                    <td>客户还会不会回来：队列留存、复购间隔、流失名单</td>
+                    <td>先看留存曲线在第几个月断崖，再看预警名单里有没有大客户。名单可直接用于回访</td>
+                </tr>
+
+                <tr>
+                    <td rowspan="3" class="is-muted">运营</td>
+                    <td><b>交付与售后</b></td>
+                    <td>交付为什么慢、售后成本花在哪</td>
+                    <td>看「交付阶段瓶颈」：它把整体准时率拆到具体环节，告诉你该管排产还是管物流</td>
+                </tr>
+                <tr>
+                    <td><b>回款与现金流</b></td>
+                    <td>钱收回来了吗：应收账龄、逾期、未来 13 周回款预测</td>
+                    <td>制造业最该盯的一页。先看 90 天以上账龄的金额，再看逾期客户清单去催收</td>
+                </tr>
+                <tr>
+                    <td><b>人效与门店</b></td>
+                    <td>人和门店的效率：人均产值、人力成本占比、门店对比</td>
+                    <td>看人均产值的同时要看人力成本占比，否则「人少活多」会被误读成效率高</td>
+                </tr>
+
+                <tr>
+                    <td class="is-muted">决策</td>
+                    <td><b>决策模拟</b></td>
+                    <td>如果调价格、调折扣、调渠道预算，毛利会变成多少</td>
+                    <td>拖动滑块看结果，<b>务必展开「假设清单」</b>看每个假设的来源，再决定是否采信</td>
+                </tr>
+
+                <tr>
+                    <td rowspan="5" class="is-muted">系统</td>
+                    <td><b>数据质量</b></td>
+                    <td>这套数据可信吗：25 条校验规则的通过情况</td>
+                    <td>向别人展示数据前先看这页。有失败项要先修数据，再谈结论</td>
+                </tr>
+                <tr>
+                    <td><b>模型在线</b></td>
+                    <td>模型有没有上线：版本、评估指标、单客户评分</td>
+                    <td>看「相对基线提升」而不是绝对数值；单客户查询能看到评分的主要影响因素</td>
+                </tr>
+                <tr>
+                    <td><b>指标字典</b></td>
+                    <td>每个数字到底怎么算出来的：56 条口径全在这里</td>
+                    <td>和别人对不上数时来这页。所有页面上的问号提示，内容都来自这里</td>
+                </tr>
+                <tr>
+                    <td><b>明细数据</b></td>
+                    <td>最细的订单清单，支持排序与分页</td>
+                    <td>需要逐单核对、或要导给别人时用。筛选条件会自动带过来</td>
+                </tr>
+                <tr>
+                    <td><b>使用说明</b></td>
+                    <td>你正在看的这页</td>
+                    <td>忘了某个栏目怎么用时回到这里</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="section">
+    <div class="section__head">
+        <h2 class="section__title">几个高频问题</h2>
+        <span class="section__note">用之前先知道，能省很多时间</span>
+    </div>
+    <div class="grid grid--2">
+        <div class="card">
+            <div class="card__body conclusion-list">
+                <div class="conclusion">
+                    <div>
+                        <div class="conclusion__title">为什么「全量」不等于「今年」</div>
+                        <div class="conclusion__body">
+                            筛选条件为空时看的是 2023 年以来的全部数据。做同比或跨年比较前，
+                            请先在上方选定年份，否则会把自己的口径和别人的口径混着比。
+                        </div>
+                    </div>
+                </div>
+                <div class="conclusion">
+                    <div>
+                        <div class="conclusion__title">百分比为什么有时是小数、有时是数字</div>
+                        <div class="conclusion__body">
+                            系统内部把所有比率存成 0 到 1 的小数（例如 0.35），
+                            页面上统一乘 100 显示成 35%。如果你自己取数，先确认拿到的是哪一种。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card__body conclusion-list">
+                <div class="conclusion">
+                    <div>
+                        <div class="conclusion__title">为什么有的数字会出现「-」</div>
+                        <div class="conclusion__body">
+                            表示该口径下没有可用样本，而不是 0。典型例子：筛选到只有未交付订单时，
+                            准时率没有分母，显示为空比显示 0% 更诚实。
+                        </div>
+                    </div>
+                </div>
+                <div class="conclusion">
+                    <div>
+                        <div class="conclusion__title">数据多久更新一次</div>
+                        <div class="conclusion__body">
+                            数据来自一条可以被反复执行的数据管道（导入 → 重算派生数据 → 重建预聚合表 → 校验）。
+                            页脚会显示当前的数据版本与基准日，用它判断自己看的是哪一批数据。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="section__head">
+        <h2 class="section__title">数据从哪来，能不能信</h2>
+        <span class="section__note">这条必须说清楚</span>
+    </div>
+    <div class="callout callout--info">
+        本系统展示的全部业务数据为程序按固定随机种子生成的模拟数据，不含任何真实个人或企业信息。
+        它的用途是演示一套完整的分析方法、指标体系与系统能力：口径是可查的、数据质量是可验证的、结论是能落到动作上的。
+        换成真实数据时，方法与系统可以直接沿用，但结论数值需要重新计算。
+    </div>
+</section>
+
+{% endblock %}
