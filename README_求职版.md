@@ -1,5 +1,7 @@
 # 杭博门业 · 经营分析系统（求职作品集版）
 
+[![CI](https://github.com/5x486/door-manufacturer-analytics/actions/workflows/ci.yml/badge.svg)](https://github.com/5x486/door-manufacturer-analytics/actions/workflows/ci.yml)
+
 > 给一家小型定制门厂做一套**能算钱、能追责、能解释**的经营分析系统：
 > 从 8 张业务表入仓，到 56 条指标口径、14 个分析页面、21 个接口，再到测试与 CI。
 >

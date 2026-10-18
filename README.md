@@ -1,5 +1,9 @@
 # 定制门业企业经营分析系统
 
+[![CI](https://github.com/5x486/door-manufacturer-analytics/actions/workflows/ci.yml/badge.svg)](https://github.com/5x486/door-manufacturer-analytics/actions/workflows/ci.yml)
+
+> 30 秒速览版与截图见 [README_求职版.md](README_求职版.md)。
+
 一套面向小型定制门厂的经营分析系统：把「8 张 CSV + 3 本 notebook + 一个 Streamlit 看板」的离线原型，重构成 Django + MySQL + DRF + 测试 + 部署配置的完整系统。数据全部由程序模拟生成，业务背景为浙江嘉兴桐乡一家 2023 年起步的小型定制门厂（1 个工厂展厅 + 抖音短视频接单 + 老客户转介 + 装企合作），主营铜门、不锈钢门、不锈钢铜门、铸铝门、甲级防盗门、防火门 6 大品类。
 
 数据区间 2023-01-01 至 2026-07-31。
