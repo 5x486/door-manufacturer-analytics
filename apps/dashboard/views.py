@@ -67,7 +67,7 @@ from apps.core.constants import (
 
 logger = logging.getLogger(__name__)
 
-# 图表统一配色：与 static/css/app.css 的 --chart-* 变量保持同一组色值。
+# 图表统一配色：与 static/css/design-system.css 的 --chart-* 变量保持同一组色值。
 # 顺序即语义：主色（成交额/主序列）→ 次色 → 强调 → 四档状态色。
 CHART_COLORS = ["#2F6FED", "#0F9D8C", "#D97706", "#C2410C", "#B42318", "#6B7280"]
 CHART_COLORS_SOFT = ["#BBD0FA", "#A7E3DB", "#F7D9A8", "#F6C3A8", "#F2C1BC", "#D7DBE0"]
