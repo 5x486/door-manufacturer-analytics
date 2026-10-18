@@ -6,8 +6,9 @@
 #   test    —— 业务口径是否被守住（口径测试 + DQ 测试 + API 契约 + ETL 幂等）
 #   quality —— 数据质量校验能否在 CI 里跑通（error 级失败会让 job 失败）
 #
-# 说明：CI 里用 MySQL 服务而不是 SQLite，因为本项目的 DQ 规则与金额对账
-# 依赖 MySQL 的 DECIMAL 精度行为，SQLite 跑绿不代表生产跑绿。
+# 说明：测试用 config.settings.test 的内存 SQLite（快、隔离），
+# 因此这里不启动 MySQL 服务；MySQL 方言相关的行为由 Docker Compose
+# 与本地端到端流程覆盖。不要在注释里声称测了 MySQL，CI 跑的是什么就写什么。
 # ============================================================================
 name: CI
 
@@ -47,23 +48,6 @@ jobs:
   test:
     name: 测试（口径 / DQ / API / ETL）
     runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: door_analysis_test
-        ports: ["3306:3306"]
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
-          --health-interval=10s --health-timeout=5s --health-retries=10
-    env:
-      DB_ENGINE: mysql
-      DB_NAME: door_analysis_test
-      DB_USER: root
-      DB_PASSWORD: root
-      DB_HOST: 127.0.0.1
-      DB_PORT: "3306"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
