@@ -111,6 +111,11 @@ jobs:
   data-quality:
     name: 数据质量校验（端到端）
     runs-on: ubuntu-latest
+    # 顶层 env 把 settings 指到了 test（内存 SQLite），每个管理命令都会拿到
+    # 一个全新的空库，于是 seed_demo 报「no such table」。端到端这一步
+    # 必须用文件库，所以这里显式切回 local，再配 DB_ENGINE=sqlite。
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings.local
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
